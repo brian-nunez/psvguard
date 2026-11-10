@@ -1,6 +1,6 @@
 # psvguard
 
-PSV Guard (`psvguard`) is a menu bar app that captures every display in real time, streams the frames through Brian's photosensitivity detector [psv](https://github.com/brian-nunez/psv) (`Analyzer.Watch`), and covers the parts of the screen that start flashing, to reduce exposure for photosensitive users. It is written in Go, with thin Objective-C bindings for macOS. macOS is the first platform; Linux (X11 and Wayland) is planned next, and v1 is built so that Linux is one more bus implementation, not a rework. Stage: pre-v1, under construction.
+PSV Guard (`psvguard`) is a menu bar app that captures every display in real time, streams the frames through Brian's photosensitivity detector [psv](https://github.com/brian-nunez/psv) (`Analyzer.Watch`), and covers the parts of the screen that start flashing, to reduce exposure for photosensitive users. It is written in Go, with thin Objective-C bindings for macOS. macOS is the first platform; Linux (X11 and Wayland) is planned next, and v1 is built so that Linux is one more bus implementation, not a rework. Stage: v1 on macOS, run locally from a source build.
 
 It is an experimental aid: it reduces exposure but does not eliminate it, and it does not detect spatial patterns. Keep that wording in user-facing text.
 
@@ -20,26 +20,48 @@ Product requirements. Do not break them; stop and ask Brian before working aroun
 
 ## Layout
 
-- Platform code lives only in the bus implementation (`bus_darwin.go`, later `bus_linux.go`) and in `cmd/psvguard` wiring files with OS suffixes. Every other package is pure Go.
-- Darwin files use `//go:build darwin && cgo`. Their stub counterparts use `//go:build !darwin || !cgo` and return a clear "not yet supported on this platform" error.
-- Event and command kinds, payload codecs and the binary cover layout are defined once in pure Go; native code mirrors the kind constants with a "must match" comment.
-- Geometry crossing the bus is normalised (0–1, top-left origin per display). Conversion to native coordinates happens only in the bus and is a pure, tested function.
-- `docs/adr/`: decision records. `docs/architecture.md`: code layout, UI contract, bus protocol and "Adding a platform".
+```
+cmd/psvguard/       flags, settings, wiring; bridge.New picks the platform's bus
+internal/app/       controller (events in, commands out); tests use the fake bus in app_test.go
+internal/bridge/    contract.go (kinds, payloads, binary cover layout), outbox.go, queue.go, bus.go;
+                    bus_darwin.go (Go side, //export) + native_darwin.go (all Objective-C); bus_other.go
+internal/monitor/   per-display Pipeline (resample → Watch → coverage) and Display (goroutine + fast path)
+internal/coverage/  the covering policy; pure functions on psv.Building
+internal/resample/  internal/frame/  internal/settings/  internal/ui/
+packaging/macos/    Info.plist template
+```
+
+- Only `internal/bridge/*_darwin.go` may know it runs on macOS. Every other package is pure Go and must build with `GOOS=linux` and `CGO_ENABLED=0`.
+- Darwin files use `//go:build darwin && cgo`; `bus_other.go` uses `//go:build !darwin || !cgo` and returns `ErrUnsupported`. A Linux bus goes in `bus_linux.go`, narrowing `bus_other.go`'s tag.
+- cgo forbids C definitions in a preamble next to `//export`, so Objective-C definitions go in `native_darwin.go` and exports in `bus_darwin.go`.
+- Event and command kinds live in `contract.go`; `native_darwin.go` mirrors them in enums marked "Must match". Change both together, plus the tables in `docs/architecture.md`.
+- Geometry crossing the bus is normalised (0–1, top-left origin per display). `pg_norm_to_points` converts it on macOS and is tested through `normToPoints` in `bus_darwin_test.go`.
+- New settings go in `settings.Fields` only; flags, the saved file and panel controls follow from it.
 
 ## Commands
 
 Toolchain: Go 1.25+ (psv requires it), Xcode Command Line Tools, FFmpeg (`ffmpeg -version`), golangci-lint v2.
 
-The Makefile is the source of truth: `make build`, `make app` (assembles and ad-hoc signs `dist/PSV Guard.app`), `make test`, `make vet`, `make lint`, `make fmt`, `make clean`. `make test` also proves the core builds for Linux and without cgo.
+| Task | Command |
+| --- | --- |
+| Build the binary | `make build` (writes `build/psvguard`) |
+| Build and ad-hoc sign the app | `make app` (writes `dist/PSV Guard.app`) |
+| Run with logs in the terminal | `make run` (the app with `--verbose`) |
+| All tests | `make test` (race tests, example videos, synthetic clips, Linux and no-cgo builds; about a minute) |
+| Quick tests | `make test-short` |
+| Capture smoke test | `make smoke` (needs Screen Recording permission for the terminal) |
+| Vet, lint, format | `make vet`, `make lint`, `make fmt` |
+| Sweep thresholds | `PSVGUARD_TUNE=1 go test ./internal/monitor -run TestTuneThresholds -v` |
+| Check a video for false covers | `PSVGUARD_CLIP=<file> go test ./internal/monitor -run TestClip -v` |
 
-Lost Screen Recording permission after a rebuild: `tccutil reset ScreenCapture com.briannunez.psvguard`, then relaunch the bundle and grant it again.
+Running `dist/PSV Guard.app/Contents/MacOS/psvguard` from a terminal uses the terminal's Screen Recording permission; opening the bundle uses the app's own. Lost permission after a rebuild: `tccutil reset ScreenCapture com.briannunez.psvguard`, then open the bundle and grant it again.
 
 ### Before finishing a change
 
 1. `make fmt` leaves no changes.
 2. `make lint` reports 0 issues, and `make vet` passes.
-3. `go test -race ./...` passes.
-4. `GOOS=linux go build ./...`, `GOOS=linux go vet ./...` and `CGO_ENABLED=0 go build ./...` pass.
+3. `make test` passes: `go test -race -short ./...`, the example-video and synthetic-clip tests (without `-race`, which makes them too slow), and the Linux and `CGO_ENABLED=0` builds.
+4. After a change to the bridge or `native_darwin.go`, `make smoke` passes and `make run` shows covers on psv's failing example videos.
 5. Docs (`README.md`, `docs/architecture.md`, ADRs) are updated if behaviour, flags, settings, the bus protocol, build steps or layout changed.
 
 ## Conventions
@@ -54,6 +76,14 @@ Lost Screen Recording permission after a rebuild: `tccutil reset ScreenCapture c
 - **Go style:** follow `.golangci.yml` (configured like bvoice's). Fix findings rather than adding `//nolint`. Wrap errors with context; user-facing errors say what failed in plain words. Logging goes to an injected logger, to stderr only with `--verbose`.
 - **Comments and docs** describe the code as it is: no references to planning chats, who decided what, or roadmaps outside ADRs.
 - Report measured numbers (latency, CPU, memory, drops, false triggers) honestly, including ones that miss expectations.
+
+## Known pitfalls
+
+- **Covering policy changes** need the example-video and synthetic-clip tests, not just unit tests: plain peak and area thresholds cover scrolling text and film grain. Check new content with `TestClip`.
+- **Boxing booleans in Objective-C:** `@(x != 0)` becomes a JSON number; use `x ? @YES : @NO`. Event decoding fails otherwise.
+- **Handle lifetime:** a stream's `cgo.Handle` is deleted on its stopped event. That event must be emitted only after the stream's sample queue drains (`PGStream reportStopped`), or a late frame callback panics on an invalid handle.
+- **Memory:** psv's region search allocates several MB per frame while the screen flashes. That is psv's, not a leak; `main` sets a soft memory limit.
+- **Driving QuickTime with `osascript`** needs Automation consent and hangs until granted; `ffplay -fs -autoexit <file>` plays a clip full-screen without it.
 
 ## Commits
 
