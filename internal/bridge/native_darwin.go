@@ -534,6 +534,20 @@ static void pg_fade(CALayer *l, float to, double seconds) {
 	[self.panel orderFrontRegardless];
 }
 
+// fitPanel sizes the panel to its contents, keeping its top edge in place.
+- (void)fitPanel {
+	NSView *root = self.panel.contentView.subviews.firstObject;
+	[root layoutSubtreeIfNeeded];
+	CGFloat h = ceil(root.fittingSize.height);
+	NSRect f = self.panel.frame;
+	NSRect c = [self.panel contentRectForFrameRect:f];
+	if (h <= 0 || fabs(c.size.height - h) < 1) return;
+	c.size.height = h;
+	NSRect nf = [self.panel frameRectForContentRect:c];
+	nf.origin.y = NSMaxY(f) - nf.size.height;
+	[self.panel setFrame:nf display:YES];
+}
+
 - (BOOL)windowShouldClose:(NSWindow *)sender {
 	[self.panel orderOut:nil];
 	return NO;
@@ -545,9 +559,9 @@ static void pg_fade(CALayer *l, float to, double seconds) {
 	switch (kind) {
 	case PGCmdSetCovers: [self setCovers:data]; break;
 	case PGCmdClearCovers: [self clearCovers:[self json:data]]; break;
-	case PGCmdStatus: [self applyStatus:[self json:data]]; break;
-	case PGCmdControls: [self setControls:[self json:data]]; break;
-	case PGCmdStats: [self setStats:[self json:data]]; break;
+	case PGCmdStatus: [self applyStatus:[self json:data]]; [self fitPanel]; break;
+	case PGCmdControls: [self setControls:[self json:data]]; [self fitPanel]; break;
+	case PGCmdStats: [self setStats:[self json:data]]; [self fitPanel]; break;
 	case PGCmdStartCapture: [self startCapture:[self json:data]]; break;
 	case PGCmdStopCapture: [self stopCapture:[self json:data]]; break;
 	case PGCmdCheckPermission: [self reportPermission]; break;
