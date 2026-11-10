@@ -1,0 +1,38 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - gocritic
+    - misspell
+    - nlreturn
+    - revive
+    - unconvert
+    - whitespace
+    - wsl_v5
+  settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+  exclusions:
+    rules:
+      # cgo rewrites each C call into a generated function with its own return statement, which
+      # nlreturn reports against the calling line.
+      - linters:
+          - nlreturn
+        source: '\bC\.\w+'
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/brian-nunez/psvguard
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
