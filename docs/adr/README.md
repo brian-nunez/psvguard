@@ -9,3 +9,4 @@ Decisions that shape this project, in [MADR](https://adr.github.io/madr/) format
 | [0003](0003-use-a-one-way-event-and-command-bus-as-the-platform-contract.md) | Use a one-way, asynchronous event and command bus as the platform contract | accepted | 2026-11-09 |
 | [0004](0004-keep-the-core-platform-neutral-and-add-linux-as-a-second-bus.md) | Keep the core platform-neutral and add Linux as a second bus | accepted | 2026-11-09 |
 | [0005](0005-ship-macos-builds-as-an-ad-hoc-signed-app-bundle.md) | Ship macOS builds as an ad-hoc signed .app bundle | accepted | 2026-11-09 |
+| [0006](0006-start-covers-from-fill-gated-hot-cells-with-a-decided-backstop.md) | Start covers from fill-gated hot cells, with psv's decided results as a backstop | proposed | 2026-11-09 |
