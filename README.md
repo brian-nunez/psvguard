@@ -30,22 +30,29 @@
   <a href="AGENTS.md">AGENTS.md</a>
 </p>
 
+<br>
+
+<p align="center">
+  <img src="docs/images/after.png" alt="A dark screen with PSV Guard's panel at the top left reading Covering flashing, and a dark cover labelled Flashing covered by PSV Guard over the area on the right where a flashing video is playing" width="100%">
+  <br><sub><b>Covering a flashing video</b>: psv's failing example plays on the right; PSV Guard covers it while the rest of the screen stays visible.</sub>
+</p>
+
 > [!WARNING]
 > **PSV Guard is an experimental aid.** It reduces exposure to flashing content but does not eliminate it, and it does not detect spatial patterns. Do not rely on it as your only protection.
 
 <p align="center">
   <a href="#why-psv-guard">Why PSV Guard</a> ·
   <a href="#quick-start">Quick start</a> ·
+  <a href="#screenshots">Screenshots</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#settings">Settings</a> ·
-  <a href="#platforms">Platforms</a> ·
   <a href="#development">Development</a> ·
   <a href="#license">License</a>
 </p>
 
 ## Why PSV Guard
 
-- **Early.** It covers flashing as it builds up, before the detector has finished deciding that the content fails: about a third of a second after full-screen flashing starts, a second and a quarter before psv's verdict.
+- **Early.** It covers flashing as it builds up, before the detector has finished deciding that the content fails: about a third of a second after full-screen flashing starts, and before psv's first failing frame on its failing examples.
 - **Targeted.** Only the flashing part of the screen is dimmed, so the rest stays usable. When most of a display flashes, the whole display is covered. Scrolling, typing and ordinary video stay uncovered.
 - **Calm.** Covers fade in quickly, fade out slowly and stay in place through the gaps between flashes, so the guard never becomes a flashing source itself.
 - **Out of the way.** It runs from the menu bar, with no Dock icon, and its covers never take focus or block clicks.
@@ -60,13 +67,34 @@ open "dist/PSV Guard.app"      # start it; it appears in the menu bar
 
 On first launch, macOS asks for **Screen Recording** permission. Grant it in System Settings, then quit and reopen PSV Guard. Click the shield in the menu bar for the panel; right-click it for the on/off toggle and Quit.
 
+The menu bar icon shows what PSV Guard is doing:
+
+| Icon | Meaning |
+| ---- | ------- |
+| Shield | Watching every display. |
+| Orange crossed-out eye | Covering flashing. |
+| Shield with an exclamation mark | Screen Recording permission is needed. |
+| Crossed-out shield | Protection is off, or the Mac is asleep. |
+| Orange warning triangle | Something needs attention; the panel says what. |
+
 If the permission is lost after a rebuild, reset it and grant it again:
 
 ```sh
 tccutil reset ScreenCapture com.briannunez.psvguard
 ```
 
-Building needs Go 1.25 or later, the Xcode Command Line Tools and FFmpeg (used by the tests).
+PSV Guard runs on macOS 14 or later. Building needs Go 1.25 or later, the Xcode Command Line Tools and FFmpeg (used by the tests).
+
+## Screenshots
+
+| Without PSV Guard | With PSV Guard |
+| ----------------- | -------------- |
+| <img src="docs/images/before.png" alt="A dark screen with a bright green frame of a flashing video on the right" width="400"> | <img src="docs/images/after.png" alt="The same screen with the flashing video covered by a dark panel and PSV Guard's panel at the top left" width="400"> |
+
+<p align="center">
+  <img src="docs/images/panel.png" alt="PSV Guard's panel: Watching 1 display, Turn Off and Quit buttons, the sensitivity settings, live stats for the built-in display, and the experimental-aid notice" width="380">
+  <br><sub><b>The panel</b>: status, sensitivity settings, live stats per display, and the experimental-aid notice.</sub>
+</p>
 
 ## How it works
 
@@ -90,8 +118,8 @@ Settings are in the panel and saved in `~/Library/Application Support/psvguard/s
 | `flashing-area` | `1` | Keep covers up while this share of the display, in percent, already flashes. |
 | `full-area` | `40` | Cover the whole display once this share, in percent, is covered. |
 | `calm` | `3` | Seconds an area stays covered after it last built up flashing. |
-| `fps` | `60` | Frames analysed per second for each display. Flag only. |
-| `capture-width` | `640` | Width, in pixels, each display is scaled to for analysis. Flag only. |
+| `fps` | `60` | Frames analysed per second for each display. Flag or settings file only; applies on restart. |
+| `capture-width` | `640` | Width, in pixels, each display is scaled to for analysis. Flag or settings file only; applies on restart. |
 | `panel` | `true` | Show the panel when PSV Guard starts. |
 
 Other flags: `--verbose` logs decisions and per-display stats (frame rate, time per frame, hot area, covers, misses) to stderr, `--trace-bridge` logs every bridge event and command, and `--version` prints the version.
@@ -109,6 +137,8 @@ Everything except the native capture and drawing layer is plain Go, so adding a 
 
 ```sh
 make test                      # race tests, psv's example videos, synthetic clips, Linux and no-cgo builds
+make test-short                # the same without the video tests
+make smoke                     # capture smoke test (needs Screen Recording permission for the terminal)
 make lint                      # golangci-lint, configured in .golangci.yml
 make run                       # build the app and run it with --verbose in the terminal
 ```
