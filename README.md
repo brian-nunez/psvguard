@@ -144,6 +144,7 @@ make run                       # build the app and run it with --verbose in the 
 ```
 
 - [Architecture](docs/architecture.md): pipeline, covering policy, bus protocol, adding a platform
+- [White paper](docs/whitepaper/psvguard-whitepaper.pdf): photosensitive epilepsy, how psv detects flashing pixels, and how PSV Guard covers it (LaTeX source in `docs/whitepaper/`)
 - [Architecture decisions](docs/adr/README.md)
 - [Guide for coding agents](AGENTS.md)
 
