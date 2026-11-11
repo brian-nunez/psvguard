@@ -30,3 +30,6 @@ go.work.sum
 /build/
 /dist/
 *.app/
+
+# White paper LaTeX output
+/docs/whitepaper/build/
