@@ -137,7 +137,7 @@ Events (`EventKind` in `internal/bridge/contract.go`, mirrored in `native_darwin
 | --- | --- |
 | 1 capabilities | `{"excludesOwnWindows","canOverlay","perDisplayCapture","consentPerSession","pixelFormats"}` |
 | 2 ready | none |
-| 3 action | `{"kind":"toggle"|"setting"|"requestPermission"|"openPermission"|"quit","key","value"}` |
+| 3 action | `{"kind":"toggle"|"setting"|"resetSettings"|"requestPermission"|"openPermission"|"quit","key","value"}` |
 | 4 displays | `[{"id","name","width","height","pixelWidth","pixelHeight","main"}]`, sizes in points |
 | 5 permission | `{"state":"granted"|"denied"|"needsConsent"|"unknown"}` |
 | 6 streamStarted, 7 streamStopped, 8 streamFailed | `{"stream","display","error"}`; a stopped stream's frame target is released |

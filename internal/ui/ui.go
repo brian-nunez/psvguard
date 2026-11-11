@@ -94,6 +94,7 @@ type ActionKind string
 const (
 	Toggle            ActionKind = "toggle"
 	SetSetting        ActionKind = "setting"
+	ResetSettings     ActionKind = "resetSettings" // restore every setting except on/off to its default
 	RequestPermission ActionKind = "requestPermission"
 	OpenPermission    ActionKind = "openPermission"
 	Quit              ActionKind = "quit"

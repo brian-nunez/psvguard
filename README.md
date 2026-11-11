@@ -92,7 +92,7 @@ PSV Guard runs on macOS 14 or later. Building needs Go 1.25 or later, the Xcode 
 | <img src="docs/images/before.png" alt="A dark screen with a bright green frame of a flashing video on the right" width="400"> | <img src="docs/images/after.png" alt="The same screen with the flashing video covered by a dark panel and PSV Guard's panel at the top left" width="400"> |
 
 <p align="center">
-  <img src="docs/images/panel.png" alt="PSV Guard's panel: Watching 1 display, Turn Off and Quit buttons, the sensitivity settings, live stats for the built-in display, and the experimental-aid notice" width="380">
+  <img src="docs/images/panel.png" alt="PSV Guard's panel: Watching 1 display, Turn Off and Quit buttons, the sensitivity settings, a Reset to Defaults button, live stats for the built-in display, and the experimental-aid notice" width="380">
   <br><sub><b>The panel</b>: status, sensitivity settings, live stats per display, and the experimental-aid notice.</sub>
 </p>
 
@@ -107,7 +107,7 @@ PSV Guard's own covers are kept out of the capture, so they never trigger more c
 
 ## Settings
 
-Settings are in the panel and saved in `~/Library/Application Support/psvguard/settings.json`. Every setting is also a command-line flag of the same name, which overrides the saved value for that run.
+Settings are in the panel and saved in `~/Library/Application Support/psvguard/settings.json`. Every setting is also a command-line flag of the same name, which overrides the saved value for that run. **Reset to Defaults** in the panel restores every setting below except `enabled`, so protection stays on or off as it was.
 
 | Setting | Default | Effect |
 | ------- | ------- | ------ |
