@@ -404,6 +404,43 @@ func TestSettingsChangesApplyLive(t *testing.T) {
 	})
 }
 
+func TestResetSettingsRestoresDefaultsAndKeepsOnOff(t *testing.T) {
+	h := start(t, macCaps)
+	h.grant(t, display1)
+
+	h.bus.send(bridge.ActionEvent{Action: ui.Action{Kind: ui.SetSetting, Key: "calm", Value: "7"}})
+	h.bus.next(t, "controls", is[bridge.SetControls])
+	h.bus.send(bridge.ActionEvent{Action: ui.Action{Kind: ui.Toggle}})
+	h.bus.next(t, "capture stopped", is[bridge.StopCapture])
+
+	h.bus.send(bridge.ActionEvent{Action: ui.Action{Kind: ui.ResetSettings}})
+	h.bus.next(t, "controls", is[bridge.SetControls])
+	h.bus.none(t, "capture while off", is[bridge.StartCapture])
+
+	want := settings.Defaults()
+	want.Enabled = false
+
+	h.store.mu.Lock()
+	got := h.store.saved[len(h.store.saved)-1]
+	h.store.mu.Unlock()
+
+	if got != want {
+		t.Fatalf("saved %+v, want %+v", got, want)
+	}
+
+	// Resetting again changes nothing but still refreshes the panel.
+	h.bus.send(bridge.ActionEvent{Action: ui.Action{Kind: ui.ResetSettings}})
+	h.bus.next(t, "controls", is[bridge.SetControls])
+
+	h.store.mu.Lock()
+	n := len(h.store.saved)
+	h.store.mu.Unlock()
+
+	if n != 3 {
+		t.Fatalf("saved %d times, want 3", n)
+	}
+}
+
 func TestSleepStopsAndWakeRestarts(t *testing.T) {
 	h := start(t, macCaps)
 	h.grant(t, display1)

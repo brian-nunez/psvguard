@@ -419,6 +419,10 @@ static void pg_fade(CALayer *l, float to, double seconds) {
 	self.settingsStack.spacing = 8;
 	[self addFull:self.settingsStack to:root inset:14];
 
+	NSButton *reset = [NSButton buttonWithTitle:@"Reset to Defaults" target:self action:@selector(resetClicked:)];
+	reset.toolTip = @"Restore every setting to its default; protection stays on or off as it is";
+	[root addArrangedSubview:reset];
+
 	NSBox *line2 = [[NSBox alloc] init];
 	line2.boxType = NSBoxSeparator;
 	[self addFull:line2 to:root inset:14];
@@ -496,6 +500,7 @@ static void pg_fade(CALayer *l, float to, double seconds) {
 - (void)toggleClicked:(id)sender { [self action:@"toggle" key:nil value:nil]; }
 - (void)permissionClicked:(id)sender { [self action:@"openPermission" key:nil value:nil]; }
 - (void)quitClicked:(id)sender { [self action:@"quit" key:nil value:nil]; }
+- (void)resetClicked:(id)sender { [self action:@"resetSettings" key:nil value:nil]; }
 - (void)showPanelClicked:(id)sender { [self showPanel]; }
 
 - (void)statusClicked:(id)sender {

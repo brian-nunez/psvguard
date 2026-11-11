@@ -257,6 +257,8 @@ func (c *Controller) onAction(a ui.Action) {
 		c.setSetting("enabled", fmt.Sprint(!c.s.Enabled))
 	case ui.SetSetting:
 		c.setSetting(a.Key, a.Value)
+	case ui.ResetSettings:
+		c.resetSettings()
 	case ui.RequestPermission:
 		c.bus.Post(bridge.RequestPermission{})
 	case ui.OpenPermission:
@@ -279,8 +281,33 @@ func (c *Controller) setSetting(key, value string) {
 		return
 	}
 
-	c.s = next
 	c.log.Printf("setting %s = %s", key, value)
+	c.applySettings(next)
+
+	if key == "enabled" && c.s.Enabled && c.perm == bridge.PermissionNeedsConsent && !c.asked {
+		c.asked = true
+		c.bus.Post(bridge.RequestPermission{})
+	}
+}
+
+// resetSettings restores the defaults, keeping protection on or off as it is.
+func (c *Controller) resetSettings() {
+	next := settings.Defaults()
+	next.Enabled = c.s.Enabled
+
+	if next == c.s {
+		c.bus.Post(bridge.SetControls{Controls: ui.Controls(c.s)})
+
+		return
+	}
+
+	c.log.Printf("settings reset to defaults")
+	c.applySettings(next)
+}
+
+// applySettings saves next, shows it in the panel and applies it to every stream.
+func (c *Controller) applySettings(next settings.Settings) {
+	c.s = next
 
 	if c.o.Store != nil {
 		if err := c.o.Store.Save(c.s); err != nil {
@@ -290,11 +317,6 @@ func (c *Controller) setSetting(key, value string) {
 	}
 
 	c.bus.Post(bridge.SetControls{Controls: ui.Controls(c.s)})
-
-	if key == "enabled" && c.s.Enabled && c.perm == bridge.PermissionNeedsConsent && !c.asked {
-		c.asked = true
-		c.bus.Post(bridge.RequestPermission{})
-	}
 
 	params := c.s.Params(c.caps.ExcludesOwnWindows)
 	for _, s := range c.streams {
