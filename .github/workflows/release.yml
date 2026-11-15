@@ -1,0 +1,105 @@
+name: Release
+
+# Runs after CI passes on a push to main. The next version comes from the Conventional Commits since
+# the last tag (scripts/next-version.sh); when there is nothing to release, the job stops early. The
+# release holds the universal, ad-hoc signed PSV Guard.app, zipped, and SHA256SUMS (ADR-0007).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Work out the next version
+        id: version
+        run: |
+          version=$(scripts/next-version.sh)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if [ -z "$version" ]; then
+            echo "::notice::Nothing to release: no feat, fix or other releasable commits since the last tag."
+          elif git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            echo "::error::Tag $version already exists."
+            exit 1
+          else
+            echo "::notice::Releasing $version from $SHA"
+          fi
+
+      - uses: actions/setup-go@v7
+        if: steps.version.outputs.version != ''
+        with:
+          go-version-file: go.mod
+
+      - name: Build the app, archive and checksums
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make release VERSION="$VERSION"
+
+      - name: Verify the archive
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          (cd dist && shasum -a 256 -c SHA256SUMS)
+
+          # Check the app as a downloader gets it: unzipped from the archive.
+          check=$(mktemp -d)
+          ditto -x -k dist/PSV-Guard-macos.zip "$check"
+          app="$check/PSV Guard.app"
+          codesign --verify --verbose=1 "$app"
+
+          archs=$(lipo -archs "$app/Contents/MacOS/psvguard")
+          if [ "$archs" != "x86_64 arm64" ]; then
+            echo "::error::The app's binary has '$archs', expected 'x86_64 arm64'"
+            exit 1
+          fi
+
+          out=$("$app/Contents/MacOS/psvguard" --version 2>&1)
+          echo "$out"
+          if [ "$out" != "psvguard $VERSION" ]; then
+            echo "::error::The app reports '$out', expected 'psvguard $VERSION'"
+            exit 1
+          fi
+
+      - name: Create tag and release
+        if: steps.version.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          PSV Guard is an experimental aid: it reduces exposure to flashing content but does not eliminate it, and it does not detect spatial patterns. Do not rely on it as your only protection.
+
+          **Install:** download `PSV-Guard-macos.zip`, unzip it and move `PSV Guard.app` to Applications. It runs on macOS 14 or later, on Apple silicon and Intel. The app is signed ad hoc, not notarised, so macOS blocks the first launch: open it once, then choose **Open Anyway** in System Settings → Privacy & Security. See the README for details.
+          NOTES
+
+          gh release create "$VERSION" dist/PSV-Guard-macos.zip dist/SHA256SUMS \
+            --target "$SHA" \
+            --title "PSV Guard $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes

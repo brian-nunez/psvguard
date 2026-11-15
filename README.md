@@ -17,13 +17,16 @@
   <img alt="Written in Go" src="https://img.shields.io/badge/written%20in-Go-e11d48?style=flat-square&logo=go&logoColor=white">
   <img alt="Runs on macOS" src="https://img.shields.io/badge/runs%20on-macOS-be123c?style=flat-square&logo=apple&logoColor=white">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-e11d48?style=flat-square">
+  <a href="https://github.com/brian-nunez/psvguard/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/brian-nunez/psvguard/ci.yml?branch=main&style=flat-square&logo=github&label=CI"></a>
+  <a href="https://github.com/brian-nunez/psvguard/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/brian-nunez/psvguard?style=flat-square&logo=github&color=be123c"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/brian-nunez/psv"><img alt="psv on GitHub" src="https://img.shields.io/badge/psv%20on%20GitHub-e11d48?style=for-the-badge&logo=github&logoColor=white" height="40"></a>
+  <a href="https://github.com/brian-nunez/psvguard/releases/latest"><img alt="Download PSV Guard" src="https://img.shields.io/badge/Download%20PSV%20Guard-e11d48?style=for-the-badge&logo=apple&logoColor=white" height="40"></a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/brian-nunez/psvguard/releases/latest"><b>Download</b></a> ·
   <a href="https://github.com/brian-nunez/psv"><b>psv</b></a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="docs/adr/README.md">Decisions</a> ·
@@ -60,6 +63,18 @@
 
 ## Quick start
 
+Download `PSV-Guard-macos.zip` from the [latest release](https://github.com/brian-nunez/psvguard/releases/latest), unzip it and move **PSV Guard.app** to Applications. It runs on macOS 14 or later, on Apple silicon and Intel Macs. Each release also has `SHA256SUMS`:
+
+```sh
+curl -fLO https://github.com/brian-nunez/psvguard/releases/latest/download/PSV-Guard-macos.zip
+curl -fLO https://github.com/brian-nunez/psvguard/releases/latest/download/SHA256SUMS
+shasum -a 256 -c SHA256SUMS
+```
+
+The app is signed ad hoc, not notarised, so macOS blocks it the first time you open it. Choose **Done**, then open System Settings → Privacy & Security, choose **Open Anyway** next to PSV Guard, and confirm. macOS remembers the choice. Alternatively, clear the download quarantine before opening it: `xattr -dr com.apple.quarantine "/Applications/PSV Guard.app"`.
+
+To build it from source instead:
+
 ```sh
 make app                       # build and sign dist/PSV Guard.app
 open "dist/PSV Guard.app"      # start it; it appears in the menu bar
@@ -77,7 +92,7 @@ The menu bar icon shows what PSV Guard is doing:
 | Crossed-out shield | Protection is off, or the Mac is asleep. |
 | Orange warning triangle | Something needs attention; the panel says what. |
 
-If the permission is lost after a rebuild, reset it and grant it again:
+If the permission is lost after an update or a rebuild, reset it and grant it again:
 
 ```sh
 tccutil reset ScreenCapture com.briannunez.psvguard
@@ -140,8 +155,23 @@ make test                      # race tests, psv's example videos, synthetic cli
 make test-short                # the same without the video tests
 make smoke                     # capture smoke test (needs Screen Recording permission for the terminal)
 make lint                      # golangci-lint, configured in .golangci.yml
+make fmt-check                 # fail if formatting would change anything
 make run                       # build the app and run it with --verbose in the terminal
+make release                   # build the universal app, zip it and write SHA256SUMS into dist/
 ```
+
+### Releases
+
+Releases are made by GitHub Actions, not from a local machine. The [CI workflow](.github/workflows/ci.yml) checks formatting, vet, lint and `make test` on macOS, builds the release app, and runs the core's tests on Linux without cgo, on each pull request and push to `main`. When CI passes on `main`, the [Release workflow](.github/workflows/release.yml) works out the next version from the [Conventional Commits](https://www.conventionalcommits.org/) since the last tag with [`scripts/next-version.sh`](scripts/next-version.sh), builds PSV Guard.app for Apple silicon and Intel, signs it ad hoc, and publishes it zipped with `SHA256SUMS` as a GitHub release ([ADR-0007](docs/adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)).
+
+| Commits since the last tag | Release |
+| -------------------------- | ------- |
+| A breaking change (`type!:` or `BREAKING CHANGE:`) | Major |
+| `feat` | Minor |
+| `fix`, `perf`, `refactor`, `build`, `revert` or any other type | Patch |
+| Only `docs`, `ci`, `chore`, `test` or `style` | No release |
+
+`psvguard --version` and the app's version in Finder come from the release's tag.
 
 - [Architecture](docs/architecture.md): pipeline, covering policy, bus protocol, adding a platform
 - [White paper](docs/whitepaper/psvguard-whitepaper.pdf): photosensitive epilepsy, how psv detects flashing pixels, and how PSV Guard covers it (LaTeX source in `docs/whitepaper/`)

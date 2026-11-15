@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-11-09
+status: accepted
+date: 2026-11-14
 decision-makers: Brian Nunez
 ---
 
@@ -49,7 +49,7 @@ Chosen option: "Fill-gated hot cells, a flashing keep-alive, and a decided backs
 * Good, because on psv's examples the failing videos are covered 0.17 s, 0.23 s and 2.8 s before their first failing frame with no misses, and the passing video stays uncovered; synthetic full-screen flashing is covered 0.28 s before its first failing frame, and fast, slow and dark-mode scrolling text and a sliding page stay uncovered.
 * Good, because live, on this Mac, full-screen flashing is covered 323–352 ms after it first appears, 6–35 ms after the triggering frame; full-screen enter and exit animations are withdrawn within about 0.1 s, before the cover's fade-in completes.
 * Bad, because flashing smaller than 15% of the display, or flashing whose fill stays low from the start, is only covered by the backstop, about a second after its first failing frame.
-* Bad, because the defaults rest on four real videos and five synthetic clips; other content may need tuning.
+* Neutral, because the live thresholds were tuned on psv's four example videos and five synthetic clips, while what counts as failing comes from psv, which is checked against the 346 videos of the Trace RERC PSE test media; any failure psv decides that the live rule left uncovered is covered by the backstop.
 * Neutral, because each threshold is a setting and `TestTuneThresholds` and `TestClip` re-check them.
 
 ### Confirmation

@@ -77,3 +77,4 @@ Chosen option: "A `.app` bundle assembled by the Makefile and signed ad hoc, wit
 
 * `tccutil reset ScreenCapture com.briannunez.psvguard` clears psvguard's Screen Recording grant.
 * Revisit if psvguard is ever distributed; that would need a Developer ID, notarisation and a new ADR.
+* [ADR-0007](0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md) narrows "no distribution": GitHub Actions publishes these ad-hoc signed bundles, built universal, on GitHub Releases, without notarisation.

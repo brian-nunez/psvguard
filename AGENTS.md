@@ -1,6 +1,6 @@
 # psvguard
 
-PSV Guard (`psvguard`) is a menu bar app that captures every display in real time, streams the frames through Brian's photosensitivity detector [psv](https://github.com/brian-nunez/psv) (`Analyzer.Watch`), and covers the parts of the screen that start flashing, to reduce exposure for photosensitive users. It is written in Go, with thin Objective-C bindings for macOS. macOS is the first platform; Linux (X11 and Wayland) is planned next, and v1 is built so that Linux is one more bus implementation, not a rework. Stage: v1 on macOS, run locally from a source build.
+PSV Guard (`psvguard`) is a menu bar app that captures every display in real time, streams the frames through Brian's photosensitivity detector [psv](https://github.com/brian-nunez/psv) (`Analyzer.Watch`), and covers the parts of the screen that start flashing, to reduce exposure for photosensitive users. It is written in Go, with thin Objective-C bindings for macOS. macOS is the first platform; Linux (X11 and Wayland) is planned next, and v1 is built so that Linux is one more bus implementation, not a rework. Stage: v1 on macOS, released by GitHub Actions as an ad-hoc signed universal app ([ADR-0007](docs/adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)), or built from source.
 
 It is an experimental aid: it reduces exposure but does not eliminate it, and it does not detect spatial patterns. Keep that wording in user-facing text.
 
@@ -29,6 +29,8 @@ internal/monitor/   per-display Pipeline (resample → Watch → coverage) and D
 internal/coverage/  the covering policy; pure functions on psv.Building
 internal/resample/  internal/frame/  internal/settings/  internal/ui/
 packaging/macos/    Info.plist template
+scripts/            release scripts (next-version.sh), tested by make test-scripts
+.github/workflows/  ci.yml (every pull request and push to main), release.yml (after CI passes on main)
 docs/whitepaper/    LaTeX white paper; figdata/ (build tag whitepaper) regenerates its data and figures
 ```
 
@@ -51,7 +53,9 @@ Toolchain: Go 1.25+ (psv requires it), Xcode Command Line Tools, FFmpeg (`ffmpeg
 | All tests | `make test` (race tests, example videos, synthetic clips, Linux and no-cgo builds; about a minute) |
 | Quick tests | `make test-short` |
 | Capture smoke test | `make smoke` (needs Screen Recording permission for the terminal) |
-| Vet, lint, format | `make vet`, `make lint`, `make fmt` |
+| Vet, lint, format | `make vet`, `make lint`, `make fmt`, `make fmt-check` |
+| Release files | `make release VERSION=vX.Y.Z` (universal app, `dist/PSV-Guard-macos.zip`, `dist/SHA256SUMS`). Releases are made by GitHub Actions, never locally. |
+| Release scripts | `make test-scripts` |
 | Sweep thresholds | `PSVGUARD_TUNE=1 go test ./internal/monitor -run TestTuneThresholds -v` |
 | Check a video for false covers | `PSVGUARD_CLIP=<file> go test ./internal/monitor -run TestClip -v` |
 
@@ -59,7 +63,7 @@ Running `dist/PSV Guard.app/Contents/MacOS/psvguard` from a terminal uses the te
 
 ### Before finishing a change
 
-1. `make fmt` leaves no changes.
+1. `make fmt-check` reports no changes.
 2. `make lint` reports 0 issues, and `make vet` passes.
 3. `make test` passes: `go test -race -short ./...`, the example-video and synthetic-clip tests (without `-race`, which makes them too slow), and the Linux and `CGO_ENABLED=0` builds.
 4. After a change to the bridge or `native_darwin.go`, `make smoke` passes and `make run` shows covers on psv's failing example videos.
@@ -88,7 +92,7 @@ Running `dist/PSV Guard.app/Contents/MacOS/psvguard` from a terminal uses the te
 
 ## Commits
 
-Every commit follows [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
+Every commit follows [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/). The release workflow derives the next version from them (`scripts/next-version.sh`): `feat` is a minor release, `fix` and other types a patch, a breaking change a major, and `docs`, `ci`, `chore`, `test` or `style` alone no release.
 
 ```text
 <type>(<scope>): <summary>
@@ -121,3 +125,4 @@ Decisions costly to reverse live in [`docs/adr/`](docs/adr/README.md). Any such 
 - Never commit `build/`, `dist/`, `*.app`, `go.work` or `go.work.sum`. Commit `go.sum`.
 - Brian's approval is required for: any new dependency; changing the bus contract (entry points, kinds' meaning, the binary cover layout); changing default trigger thresholds or calm time; changing the bundle ID or signing identity; anything that would make psvguard's windows capturable by its own stream.
 - Do not commit, push, create the GitHub remote or publish unless Brian asks.
+- Do not create tags or releases by hand; merging to `main` releases through the Release workflow, versioned from the Conventional Commits.
