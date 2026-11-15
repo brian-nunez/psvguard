@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: Format, lint, vet, test and build
+    # The macOS bus is cgo with Apple frameworks, and the app is assembled and signed with Apple's
+    # tools, so the main job runs on macOS (Apple silicon).
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # The example-video and synthetic-clip tests decode and generate video with FFmpeg.
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+          ffmpeg -version | head -n 1
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
+          install-only: true
+
+      - name: Format
+        run: make fmt-check
+
+      - name: Vet
+        run: make vet
+
+      - name: Lint
+        run: make lint
+
+      # Race tests, psv's example videos, the synthetic clips, and the Linux and no-cgo builds.
+      - name: Test
+        run: make test
+
+      - name: Test release scripts
+        run: make test-scripts
+
+      - name: Build the release app
+        run: make release
+
+      - name: Verify the release app
+        run: |
+          codesign --verify --verbose=1 "dist/PSV Guard.app"
+          (cd dist && shasum -a 256 -c SHA256SUMS)
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            git diff
+            echo "::error::The build changed tracked files. Run make fmt or go mod tidy and commit the result."
+            exit 1
+          fi
+
+  portable:
+    name: Linux core without cgo
+    # Everything except the macOS bus must build, vet and test on Linux without cgo (ADR-0004).
+    # make test cross-compiles for Linux; this job runs the tests on Linux itself.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -short ./internal/...
