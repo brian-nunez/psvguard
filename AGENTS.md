@@ -29,6 +29,7 @@ internal/monitor/   per-display Pipeline (resample → Watch → coverage) and D
 internal/coverage/  the covering policy; pure functions on psv.Building
 internal/resample/  internal/frame/  internal/settings/  internal/ui/
 packaging/macos/    Info.plist template
+docs/whitepaper/    LaTeX white paper; figdata/ (build tag whitepaper) regenerates its data and figures
 ```
 
 - Only `internal/bridge/*_darwin.go` may know it runs on macOS. Every other package is pure Go and must build with `GOOS=linux` and `CGO_ENABLED=0`.

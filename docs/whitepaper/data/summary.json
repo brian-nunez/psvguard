@@ -1,0 +1,72 @@
+[
+  {
+    "name": "local",
+    "fps": 60,
+    "source": "1280x720",
+    "analysed": "640x360",
+    "firstFail": 1.6,
+    "firstFlashing": 1.6,
+    "firstCover": 1.299999948,
+    "firstActivity": 1.0166666666666666,
+    "decidedFails": 24,
+    "misses": 0,
+    "coverSeconds": 4.716666477999988,
+    "seconds": 3.99999984
+  },
+  {
+    "name": "colors",
+    "fps": 29.97002997002997,
+    "source": "1920x1080",
+    "analysed": "640x360",
+    "firstFail": 0.33366666666666667,
+    "firstFlashing": 0.33366666666666667,
+    "firstCover": 0.183333326,
+    "firstActivity": 0.03336666666666667,
+    "decidedFails": 230,
+    "misses": 0,
+    "coverSeconds": 9.83333294000005,
+    "seconds": 8.00799984
+  },
+  {
+    "name": "flash",
+    "fps": 60,
+    "source": "1280x720",
+    "analysed": "640x360",
+    "firstFail": 1.6,
+    "firstFlashing": 1.6,
+    "firstCover": 1.299999948,
+    "firstActivity": 1,
+    "decidedFails": 24,
+    "misses": 0,
+    "coverSeconds": 4.716666477999988,
+    "seconds": 3.99999984
+  },
+  {
+    "name": "scroll",
+    "fps": 60,
+    "source": "1280x720",
+    "analysed": "640x360",
+    "firstFail": -1,
+    "firstFlashing": 0.11666666666666667,
+    "firstCover": -1,
+    "firstActivity": 0.016666666666666666,
+    "decidedFails": 0,
+    "misses": 0,
+    "coverSeconds": 0,
+    "seconds": 3.99999984
+  },
+  {
+    "name": "ad",
+    "fps": 23.976023976023978,
+    "source": "1920x1080",
+    "analysed": "640x360",
+    "firstFail": -1,
+    "firstFlashing": 0.8341666666666666,
+    "firstCover": -1,
+    "firstActivity": 0.5422083333333333,
+    "decidedFails": 0,
+    "misses": 0,
+    "coverSeconds": 0,
+    "seconds": 5.00499996
+  }
+]
