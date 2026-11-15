@@ -25,7 +25,7 @@
 \usepackage{siunitx}
 \usepackage{tcolorbox}
 
-\pgfplotsset{compat=1.18}
+\pgfplotsset{compat=1.18,legend cell align=left}
 \usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,fit,backgrounds,decorations.pathreplacing,patterns}
 \usepgfplotslibrary{fillbetween}
 
@@ -92,7 +92,7 @@
 
     {\Large\bfseries Brian Nunez\par}
     \vspace{0.3cm}
-    {\large\color{muted} White paper \textperiodcentered{} November 2026\par}
+    {\large\color{muted} November 2026\par}
   \end{center}
   \vfill
   \begin{center}
@@ -220,18 +220,18 @@ Every guideline reduces these findings to the same three tests (\cref{fig:three}
 
 \begin{figure}[ht]
   \centering
-  \begin{tikzpicture}[circ/.style={circle,minimum size=3.6cm,draw=ink!60,line width=0.8pt,fill opacity=0.35,text opacity=1}]
+  \begin{tikzpicture}[circ/.style={circle,minimum size=4.2cm,draw=ink!60,line width=0.8pt,fill opacity=0.35,text opacity=1}]
     \node[circ,fill=cold] (i) at (0,0) {};
-    \node[circ,fill=hot] (a) at (2.2,0) {};
-    \node[circ,fill=calm] (c) at (1.1,-1.85) {};
-    \node[font=\bfseries] at (-0.75,0.45) {Intensity};
-    \node[font=\scriptsize,align=center] at (-0.75,0) {$\Delta L \ge 0.1$, dark $<0.8$\\or a red change};
-    \node[font=\bfseries] at (2.95,0.45) {Area};
-    \node[font=\scriptsize,align=center] at (2.95,0) {$\ge 25\%$ of a\\\ang{10} field};
-    \node[font=\bfseries] at (1.1,-2.55) {Count};
-    \node[font=\scriptsize,align=center] at (1.1,-2.95) {$>6$ alternating\\transitions in 1\,s};
-    \node[font=\bfseries\color{brandDark},align=center] at (1.1,-0.65) {fails};
-    \node[font=\small\itshape,align=left,anchor=west,text width=5.3cm] at (4.4,-0.9)
+    \node[circ,fill=hot] (a) at (2.5,0) {};
+    \node[circ,fill=calm] (c) at (1.25,-2.0) {};
+    \node[font=\bfseries] at (-0.8,1.0) {Intensity};
+    \node[font=\scriptsize,align=center] at (-0.9,0.3) {$\Delta L \ge 0.1$,\\darker side $<0.8$,\\or a red change};
+    \node[font=\bfseries] at (3.15,0.75) {Area};
+    \node[font=\scriptsize,align=center] at (3.25,0.15) {$\ge 25\%$ of any\\\ang{10} field};
+    \node[font=\bfseries] at (1.25,-2.6) {Count};
+    \node[font=\scriptsize,align=center] at (1.25,-3.05) {$>6$ alternating\\transitions in 1\,s};
+    \node[font=\bfseries\color{brandDark},align=center] at (1.25,-0.8) {fails};
+    \node[font=\small\itshape,align=left,anchor=west,text width=5.0cm] at (5.0,-1.1)
       {Each test alone is common in ordinary content: scrolling text changes intensity often, and a scene cut changes a large area. Only the combination is the hazard.};
   \end{tikzpicture}
   \caption{The three tests every flash guideline applies. Content fails only where all three overlap.}
@@ -262,20 +262,20 @@ The guidelines differ mainly in how they measure area. \Cref{tab:guidelines} com
   \begin{tikzpicture}[scale=0.9]
     % eye and field
     \fill[ink] (0,0) circle (0.18);
-    \draw[thick,brand] (0,0) -- (7,1.23);
-    \draw[thick,brand] (0,0) -- (7,-1.23);
-    \draw[brand] (1.6,0) ++(10:1) arc (10:-10:1);
-    \node[font=\small,brand] at (2.95,0) {\ang{10}};
+    \draw[thick,brand] (0,0) -- (7,0.8);
+    \draw[thick,brand] (0,0) -- (7,-0.8);
+    \draw[brand] (0,0) ++(6.52:2.2) arc (6.52:-6.52:2.2);
+    \node[font=\small,brand,anchor=west] at (2.25,0) {\ang{10}};
     \node[font=\small,anchor=north] at (0,-0.3) {viewer};
     % screen
     \draw[thick,ink!70,fill=panel] (7,-2.4) rectangle (7.25,2.4);
     \node[font=\small,anchor=west] at (7.4,2.25) {screen, $1024\times768$ reference};
-    \fill[brand!35] (7,-1.23) rectangle (7.25,1.23);
-    \draw[decorate,decoration={brace,amplitude=5pt}] (7.35,1.23) -- (7.35,-1.23)
-      node[midway,right=7pt,font=\small,align=left] {a \ang{10} field: $341\times256$ px;\\flashing must cover 25\% of it,\\i.e.\ $\approx$\num{21824} px};
+    \fill[brand!35] (7,-0.8) rectangle (7.25,0.8);
+    \draw[decorate,decoration={brace,amplitude=5pt}] (7.35,0.8) -- (7.35,-0.8)
+      node[midway,right=7pt,font=\small,align=left] {a \ang{10} field: $341\times256$ px,\\a third of the screen each way;\\flashing must cover 25\% of it,\\i.e.\ $\approx$\num{21824} px};
     \draw[<->,ink!60] (0,-1.8) -- node[below,font=\scriptsize]{typical viewing distance} (7,-1.8);
   \end{tikzpicture}
-  \caption{How WCAG turns a visual angle into pixels. The $341\times256$ rectangle stands for a quarter of the display at a typical viewing distance. \psv{} checks it at every position in the frame, and \guard{} scales it by the display's points per captured pixel.}
+  \caption{How WCAG turns a visual angle into pixels. The $341\times256$ rectangle, a third of the reference screen's width and height, stands for a \ang{10} field at a typical viewing distance. \psv{} checks it at every position in the frame, and \guard{} scales it by the display's points per captured pixel.}
   \label{fig:field}
 \end{figure}
 
@@ -313,18 +313,22 @@ Frames larger than full HD are reduced by an integer factor, averaging blocks of
         legend style={font=\scriptsize,at={(0.03,0.97)},anchor=north west,draw=none,fill=white,fill opacity=0.85}]
       \addplot[name path=top,draw=none,domain=0:255] {1};
       \addplot[name path=dark,draw=none,domain=0:255] {0.8};
-      \addplot[fill=ink!10,draw=none,area legend] fill between[of=top and dark];
+      \addplot[fill=ink!10,draw=none,forget plot] fill between[of=top and dark];
+      \addlegendimage{area legend,fill=ink!10,draw=ink!30}
       \addlegendentry{darker side $\ge 0.8$: no transition}
       \addplot[very thick,brand,domain=0:255,samples=200]
         {(x/255<=0.04045) ? (x/255/12.92) : (((x/255+0.055)/1.055)^2.4)};
       \addlegendentry{sRGB grey to $L$}
-      \draw[ink,thick,-{Stealth}] (axis cs:150,0.305) -- (axis cs:150,0.405);
-      \node[font=\scriptsize,anchor=west] at (axis cs:153,0.355) {$\Delta L = 0.1$};
-      \draw[ink,thick,-{Stealth}] (axis cs:60,0.045) -- (axis cs:60,0.145);
-      \node[font=\scriptsize,anchor=east] at (axis cs:57,0.095) {$\Delta L = 0.1$};
+      % L(60)=0.045 -> L=0.145 at grey 106; L(200)=0.578 -> L=0.678 at grey 215
+      \draw[ink,thick] (axis cs:60,0.045) -- (axis cs:106.4,0.045);
+      \draw[ink,thick,-{Stealth}] (axis cs:106.4,0.045) -- (axis cs:106.4,0.145);
+      \node[font=\scriptsize,anchor=west,align=left] at (axis cs:112,0.095) {$\Delta L = 0.1$ needs\\46 grey levels};
+      \draw[ink,thick] (axis cs:200,0.578) -- (axis cs:214.7,0.578);
+      \draw[ink,thick,-{Stealth}] (axis cs:214.7,0.578) -- (axis cs:214.7,0.678);
+      \node[font=\scriptsize,anchor=east,align=right] at (axis cs:196,0.62) {$\Delta L = 0.1$ needs\\15 grey levels};
     \end{axis}
   \end{tikzpicture}
-  \caption{The sRGB transfer function for greys. A change of 0.1 in relative luminance is a much smaller step in encoded values near black than near white, which is why \psv{} works in linear light. Changes whose darker side is above 0.8 (shaded) are not transitions.}
+  \caption{The sRGB transfer function for greys. The same change of 0.1 in relative luminance takes 46 encoded grey levels from a dark grey but only 15 from a light one, which is why \psv{} measures in linear light rather than in encoded values. Changes whose darker side is above 0.8 (shaded) are not transitions.}
   \label{fig:transfer}
 \end{figure}
 
@@ -348,7 +352,7 @@ A step into saturated red counts as up and a step out of it as down. Between two
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}
-    \begin{axis}[width=0.55\linewidth,height=6cm,xmin=0,xmax=0.65,ymin=0,ymax=0.65,
+    \begin{axis}[width=0.55\linewidth,height=6.4cm,xmin=0,xmax=0.7,ymin=0,ymax=0.75,
         xlabel={$u'$},ylabel={$v'$},axis equal image,grid=major,grid style={ink!8},
         legend style={font=\scriptsize,at={(1.03,0.5)},anchor=west,draw=none}]
       \addplot[fill=ink!5,draw=ink!60,thick] coordinates {(0.4507,0.5229) (0.1250,0.5625) (0.1754,0.1579) (0.4507,0.5229)};
@@ -382,19 +386,19 @@ Two rules turn steps into the transitions the guidelines count (\cref{fig:rules}
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}
-    \begin{axis}[width=\linewidth,height=4.6cm,xmin=-0.5,xmax=15.5,ymin=-0.05,ymax=0.95,
+    \begin{axis}[width=\linewidth,height=4.6cm,xmin=-0.5,xmax=15.5,ymin=-0.05,ymax=1.0,
         xlabel={Frame},ylabel={$L$},xtick={0,...,15},ytick={0,0.4,0.8},grid=major,grid style={ink!8},
         clip=false]
       \addplot[const plot,very thick,ink] coordinates {
         (0,0.05) (1,0.6) (2,0.6) (3,0.05) (4,0.16) (5,0.27) (6,0.38) (7,0.38) (8,0.17) (9,0.02) (10,0.6) (11,0.65) (12,0.68) (13,0.71) (14,0.74) (15,0.74)};
       % counted transitions
-      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:1,0.88) {1};
-      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:3,0.88) {2};
-      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:4,0.88) {3};
-      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:8,0.88) {4};
-      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:10,0.88) {5};
-      \node[font=\scriptsize,align=center,anchor=north] at (axis cs:2,0.42) {up, down:\\two transitions};
-      \node[font=\scriptsize,align=center,anchor=south] at (axis cs:5,0.37) {three steps up\\= one transition};
+      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:1,0.92) {1};
+      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:3,0.92) {2};
+      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:4,0.92) {3};
+      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:8,0.92) {4};
+      \node[circle,fill=brand,text=white,font=\tiny\bfseries,inner sep=1.5pt] at (axis cs:10,0.92) {5};
+      \node[font=\scriptsize,align=center,anchor=south] at (axis cs:2,0.62) {up, down:\\two transitions};
+      \node[font=\scriptsize,align=center,anchor=south] at (axis cs:4.7,0.45) {three steps up\\= one transition};
       \node[font=\scriptsize,align=center,anchor=south] at (axis cs:8.5,0.5) {two steps down\\= one transition};
       \node[font=\scriptsize,align=center,anchor=north] at (axis cs:12.8,0.6) {sub-threshold ramp:\\no transition};
     \end{axis}
@@ -449,7 +453,7 @@ Each pixel stores the frames of its counted transitions as a bitmask over the la
       \else \node[bit,fill=white] at (\i*0.42,0) {0}; \fi
     }
     \draw[decorate,decoration={brace,amplitude=5pt,mirror}] (-0.21,-0.35) -- (8.19,-0.35)
-      node[midway,below=6pt,font=\small] {the last second: $r=20$ frames, here 7 bits set $\Rightarrow$ the pixel flashes};
+      node[midway,below=6pt,font=\small] {the last second at 20 fps: $r=20$ bits, here 7 set $\Rightarrow$ the pixel flashes};
     \node[font=\small,anchor=east] at (-0.35,0) {bit $k$ = frame $t-k$};
     \draw[-{Stealth},thick] (0,0.55) -- (0,0.3);
     \node[font=\scriptsize,anchor=south] at (0,0.55) {now};
@@ -485,18 +489,18 @@ The region search runs only in frames where enough flashing pixels transition to
     \draw[ink!30,step=0.5] (0,0) grid (8,4.5);
     \draw[thick,ink] (0,0) rectangle (8,4.5);
     % flashing pixels blob
-    \fill[flash!70] (3,1) rectangle (6.5,3.5);
-    \fill[flash!70] (1,3.5) rectangle (2,4);
-    \node[font=\scriptsize,white] at (4.75,2.25) {flashing pixels};
+    \fill[flash!70] (3,1) rectangle (6.5,2.75);
+    \fill[flash!70] (6.5,3.75) rectangle (7.5,4.25);
+    \node[font=\scriptsize,white] at (4.0,1.9) {flashing pixels};
     % region window
     \draw[very thick,cold,dashed] (2.5,0.5) rectangle (5.5,3);
     \node[font=\scriptsize,cold,anchor=east,align=right] at (2.4,1.75) {region\\$w\times h$};
     % corners
     \foreach \p in {(2.5,0.5),(5.5,0.5),(2.5,3),(5.5,3)} \fill[ink] \p circle (2.2pt);
-    \node[font=\scriptsize,anchor=north east] at (2.45,0.5) {$S(x_1,y_1)$};
-    \node[font=\scriptsize,anchor=north west] at (5.55,0.5) {$S(x_2,y_1)$};
-    \node[font=\scriptsize,anchor=south east] at (2.45,3) {$S(x_1,y_2)$};
-    \node[font=\scriptsize,anchor=south west] at (5.55,3) {$S(x_2,y_2)$};
+    \node[font=\scriptsize,fill=white,inner sep=1pt,anchor=north east] at (2.45,0.5) {$S(x_1,y_1)$};
+    \node[font=\scriptsize,fill=white,inner sep=1pt,anchor=north west] at (5.55,0.5) {$S(x_2,y_1)$};
+    \node[font=\scriptsize,fill=white,inner sep=1pt,anchor=south east] at (2.45,3) {$S(x_1,y_2)$};
+    \node[font=\scriptsize,fill=white,inner sep=1pt,anchor=south west] at (5.55,3) {$S(x_2,y_2)$};
     \node[font=\small,align=left,anchor=west,text width=5.5cm] at (8.6,2.25)
       {Every position of the window is tested: is at least 25\% of it made of flashing pixels that start a transition in the same direction in this frame? Each test is four table look-ups, whatever the window size.};
   \end{tikzpicture}
@@ -517,8 +521,8 @@ The asymmetry that makes live protection possible is this: \emph{only the absenc
   \begin{tikzpicture}[x=0.95cm]
     \draw[-{Stealth},thick,ink] (0,0) -- (14.5,0) node[right,font=\small]{frames};
     \foreach \x in {0,...,14} \draw (\x,0.08) -- (\x,-0.08);
-    \fill[hot!60] (2,0.2) rectangle (9,0.6);
-    \node[font=\scriptsize] at (5.5,0.4) {transitions build up};
+    \fill[hot!60] (2,0.2) rectangle (8,0.6);
+    \node[font=\scriptsize] at (5,0.4) {transitions build up};
     \draw[very thick,flash] (8,-0.3) -- (8,1.1);
     \node[font=\scriptsize,align=center,anchor=south] at (8,1.1) {7th transition:\\Building reports it flashing};
     \draw[very thick,cold] (2,-0.3) -- (2,1.1);
@@ -574,7 +578,8 @@ where $c$ ranges over the cells of a $64\times36$ grid laid over the frame. \cod
     \begin{axis}[name=b1,width=0.52\linewidth,height=5cm,xmin=0,xmax=1.5,ymin=0,ymax=105,
         title={\small colors-epilepsy-warning},xlabel={Time (s)},ylabel={\% of frame},
         grid=major,grid style={ink!8},legend style={font=\scriptsize,at={(0.98,0.4)},anchor=east,fill=white,fill opacity=0.9,draw=none}]
-      \addplot[ycomb,flash!35,line width=1.2pt] table[x=t,y expr=\thisrow{failed}>0 ? 100 : nan] {\colorsframes};
+      \addplot[ycomb,flash!35,line width=1.2pt,forget plot] table[x=t,y expr=\thisrow{failed}>0 ? 100 : nan] {\colorsframes};
+      \addlegendimage{area legend,fill=flash!35,draw=none}
       \addlegendentry{decided failing}
       \addplot[only marks,mark=*,mark size=1.6pt,ink] table[x=t,y expr=\thisrow{area}>0 ? \thisrow{area} : nan] {\colorsframes};
       \addlegendentry{Area}
@@ -607,25 +612,22 @@ A 1080p frame has two million pixels, and strobe footage can make most of them t
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}[
-      blk/.style={draw=ink!60,rounded corners=2pt,fill=white,minimum height=0.95cm,text width=2.3cm,align=center,font=\scriptsize},
-      lane/.style={draw=ink!25,fill=panel,rounded corners=4pt},
+      blk/.style={draw=ink!60,rounded corners=2pt,fill=white,minimum height=0.95cm,text width=2.55cm,align=center,font=\scriptsize},
+      nat/.style={blk,fill=ink!10},
       arr/.style={-{Stealth[length=2.2mm]},thick,ink!70}]
-    \node[blk] (sck) {ScreenCaptureKit\\one stream per display};
-    \node[blk,right=0.45cm of sck] (conv) {convert BGRA\\into a pooled frame};
-    \node[blk,right=0.45cm of conv] (res) {resample to\\exactly 60 fps};
-    \node[blk,right=0.45cm of res,draw=brand,fill=brand!8] (watch) {\psv{} \code{Watch}\\Building + Decided};
+    \node[nat] (sck) {ScreenCaptureKit\\one stream per display};
+    \node[blk,right=0.35cm of sck] (conv) {convert BGRA\\into a pooled frame};
+    \node[blk,right=0.35cm of conv] (res) {resample to\\exactly 60 fps};
+    \node[blk,right=0.35cm of res,draw=brand,fill=brand!8] (watch) {\psv{} \code{Watch}\\Building + Decided};
     \node[blk,below=0.9cm of watch] (pol) {covering policy\\hot cells, fill, holds};
-    \node[blk,left=0.45cm of pol] (bus) {one-way bus\\\code{pg\_post}};
-    \node[blk,left=0.45cm of bus] (ov) {cover panels\\Core Animation fades};
-    \node[blk,left=0.45cm of ov] (ui) {menu bar + panel\\status, settings, stats};
+    \node[blk,left=0.35cm of pol] (bus) {one-way bus\\\code{pg\_post}};
+    \node[nat,left=0.35cm of bus] (ov) {cover panels\\Core Animation\\fades};
+    \node[nat,left=0.35cm of ov] (ui) {menu bar + panel\\status, settings, stats};
     \draw[arr] (sck) -- (conv); \draw[arr] (conv) -- (res); \draw[arr] (res) -- (watch);
     \draw[arr] (watch) -- (pol); \draw[arr] (pol) -- (bus); \draw[arr] (bus) -- (ov);
     \draw[arr,dashed] (bus.south) -- ++(0,-0.35) -| (ui.south);
-    \begin{scope}[on background layer]
-      \node[lane,fit=(sck)(ov)(ui),inner sep=6pt] {};
-    \end{scope}
-    \node[font=\scriptsize,color=muted,anchor=north west] at ($(ui.south west)+(-0.1,-0.45)$)
-      {Objective-C only executes commands; all decisions are made in Go. The core builds and tests on Linux.};
+    \node[font=\scriptsize,color=muted,anchor=north west,text width=12cm] at ($(ui.south west)+(0,-0.5)$)
+      {Grey boxes are native Objective-C, which only executes commands; white boxes are Go, which makes every decision. The core builds and tests on Linux.};
   \end{tikzpicture}
   \caption{\guard{}'s pipeline for one display. Native callbacks only copy and enqueue, the main thread is never blocked, and covers are excluded from the capture so they never feed back into analysis.}
   \label{fig:arch}
@@ -707,8 +709,8 @@ A frame in which every pixel of every active cell transitions has a fill of 1. S
     \draw[arr] (hold.west) -| node[lab,pos=0.3,below]{calm 3\,s: fade out 1\,s} (watch.south);
     \draw[arr] (hold.north east) to[bend right=25] node[lab,right]{hot near cover} (cov.south east);
     \draw[arr] (cov) -- node[lab,above]{$\ge 40\%$} (full);
-    \draw[arr] (cov.north) to[out=60,in=120,looseness=5] node[lab,above]{keep: fill or $\ge 1\%$ flashing;\\grow only next to cover} (cov.north);
-    \draw[arr,dashed] (cov.south west) to[bend left=22] node[lab,below]{Space change within 1\,s} (watch.south east);
+    \draw[arr] ([xshift=-0.5cm]cov.north) .. controls +(-0.3,1.1) and +(0.3,1.1) .. node[lab,above]{keep: fill or $\ge 1\%$ flashing;\\grow only next to cover} ([xshift=0.5cm]cov.north);
+    \draw[arr,dashed] (cov.south west) to[bend left=22] node[lab,below]{Space change, cover $<1$\,s old} (watch.south east);
   \end{tikzpicture}
   \caption{The covering policy for one display. Covers fade in over 0.15\,s and out over 1\,s, and holds prevent rapid toggling, so a cover can never itself become a flashing stimulus.}
   \label{fig:policy}
