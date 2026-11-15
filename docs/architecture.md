@@ -295,4 +295,5 @@ size, about 50 MB per display.
 - Flashing smaller than the minimum area, or whose fill stays low before psv decides it fails:
   the decided backstop covers it about a second after its first failing frame.
 - Platforms other than macOS (Linux is designed for but not implemented).
-- Distribution, notarisation, auto-update and launch at login.
+- Notarisation, auto-update and launch at login. Releases are ad-hoc signed, so macOS asks once
+  before the first launch ([ADR-0007](adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)).
