@@ -153,8 +153,10 @@ func writeText(path string) {
 }
 
 func monospaceFont() string {
-	for _, f := range []string{"/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Monaco.ttf",
-		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"} {
+	for _, f := range []string{
+		"/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Monaco.ttf",
+		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+	} {
 		if _, err := os.Stat(f); err == nil {
 			return f
 		}
