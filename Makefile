@@ -1,6 +1,7 @@
 # psvguard build.
 #
-#   make build        build the Go binary into build/psvguard
+#   make build        build the Go binary into build/psvguard (on Linux, with the Wayland bus)
+#   make install-linux install the binary, desktop entry and icon under PREFIX (default ~/.local)
 #   make app          assemble and ad-hoc sign "dist/PSV Guard.app" (macOS)
 #   make run          build the app and start it with --verbose, logging to the terminal
 #   make test         race tests, the example-video and synthetic-clip tests (FFmpeg), and the
@@ -31,7 +32,7 @@ APP   := $(DIST)/$(APP_NAME).app
 # The release archive keeps the same name in every release, so releases/latest/download/ links work.
 ZIP   := $(DIST)/PSV-Guard-macos.zip
 
-.PHONY: all build universal app release run test test-short test-portable test-scripts smoke vet lint fmt fmt-check clean dev-up dev-shell dev-down
+.PHONY: all build universal app release run test test-short test-portable test-scripts smoke vet lint fmt fmt-check clean dev-up dev-shell dev-down install-linux
 
 all: app
 
@@ -88,6 +89,14 @@ release: universal $(BUILD)/AppIcon.icns
 
 run: app
 	"$(APP)/Contents/MacOS/psvguard" --verbose
+
+# Linux (Wayland, ADR-0008): the binary, a desktop entry and the icon. DESTDIR stages a package.
+PREFIX ?= $(HOME)/.local
+
+install-linux: build
+	install -Dm755 $(BUILD)/psvguard "$(DESTDIR)$(PREFIX)/bin/psvguard"
+	install -Dm644 packaging/linux/psvguard.desktop "$(DESTDIR)$(PREFIX)/share/applications/psvguard.desktop"
+	install -Dm644 assets/icon.svg "$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/psvguard.svg"
 
 # The race detector slows psv too much for the video tests, so they run separately without it.
 test: test-short
