@@ -1,0 +1,33 @@
+--- a/src/grd-egl-thread.c
++++ b/src/grd-egl-thread.c
+@@ -733,6 +733,8 @@
+   g_autoptr (GrdEglThread) egl_thread = NULL;
+ 
+   egl_thread = g_new0 (GrdEglThread, 1);
++  egl_thread->drm_render_node_fd = -1;
++  egl_thread->impl.drm_render_node_fd = -1;
+   egl_thread->slot_table =
+     g_hash_table_new_full (NULL, NULL,
+                            NULL, (GDestroyNotify) replaceable_task_free);
+--- a/src/grd-vnc-pipewire-stream.c
++++ b/src/grd-vnc-pipewire-stream.c
+@@ -167,6 +167,8 @@
+   GrdVncPwBuffer *vnc_pw_buffer;
+ 
+   vnc_pw_buffer = g_new0 (GrdVncPwBuffer, 1);
++  vnc_pw_buffer->acquire_syncobj_fd = -1;
++  vnc_pw_buffer->release_syncobj_fd = -1;
+   vnc_pw_buffer->pw_stream = pw_stream;
+   vnc_pw_buffer->pw_buffer = pw_buffer;
+   g_mutex_init (&vnc_pw_buffer->buffer_mutex);
+--- a/src/grd-settings-headless.c
++++ b/src/grd-settings-headless.c
+@@ -48,7 +48,7 @@
+                        "runtime-mode", GRD_RUNTIME_MODE_HEADLESS,
+                        "rdp-screen-share-mode", GRD_RDP_SCREEN_SHARE_MODE_EXTEND,
+                        "rdp-view-only", FALSE,
+-                       "vnc-screen-share-mode", GRD_RDP_SCREEN_SHARE_MODE_EXTEND,
++                       "vnc-screen-share-mode", GRD_VNC_SCREEN_SHARE_MODE_MIRROR_PRIMARY,
+                        "vnc-view-only", FALSE,
+                        "vnc-auth-method", GRD_VNC_AUTH_METHOD_PASSWORD,
+                        NULL);

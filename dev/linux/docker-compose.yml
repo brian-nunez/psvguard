@@ -4,6 +4,9 @@
 #   open http://localhost:6081/            (noVNC)
 #   docker compose -f dev/linux/docker-compose.yml exec omarchy bash -lc 'make test'
 #
+#   docker compose -f dev/linux/docker-compose.yml up -d --build ubuntu
+#   open http://localhost:6082/            (noVNC, Ubuntu 26.04 GNOME Wayland)
+#
 # The repository is mounted at /src. Go's caches live in a named volume.
 
 services:
@@ -35,5 +38,29 @@ services:
       start_period: 30s
       retries: 3
 
+  ubuntu:
+    build:
+      context: ./ubuntu
+    image: psvguard-dev-ubuntu:1
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+    volumes:
+      - ../..:/src
+      - go-ubuntu:/home/dev/go
+    ports:
+      - "127.0.0.1:6082:6080"
+    # GNOME Shell runs headless on Mesa's llvmpipe: no GPU device is passed in.
+    mem_limit: 4g
+    cpus: 4
+    shm_size: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null && pgrep -x gnome-shell >/dev/null && pgrep -x gnome-remote-de >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
 volumes:
   go-omarchy:
+  go-ubuntu:
