@@ -1,0 +1,39 @@
+# Desktops for building and testing psvguard's Linux bus by hand. Development only.
+#
+#   docker compose -f dev/linux/docker-compose.yml up -d --build omarchy
+#   open http://localhost:6081/            (noVNC)
+#   docker compose -f dev/linux/docker-compose.yml exec omarchy bash -lc 'make test'
+#
+# The repository is mounted at /src. Go's caches live in a named volume.
+
+services:
+  omarchy:
+    build:
+      context: ./omarchy
+    image: psvguard-dev-omarchy:1
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+    volumes:
+      - ../..:/src
+      - go-omarchy:/home/dev/go
+    ports:
+      - "127.0.0.1:6081:6080"
+    # Hyprland's nested backend allocates buffers on a GPU render node; it cannot run on software
+    # rendering alone. Only the render node is passed in: no display or KMS access.
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - "${RENDER_GID:-render}"
+    mem_limit: 4g
+    cpus: 4
+    shm_size: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null && pgrep -x wayvnc >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  go-omarchy:
