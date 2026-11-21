@@ -255,6 +255,29 @@ func TestPermissionFlowAsksOnceThenStartsCapture(t *testing.T) {
 	}
 }
 
+func TestPermissionTextFollowsHowThePlatformAsks(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		caps bridge.Capabilities
+		want string
+	}{
+		{"settings page", macCaps, "system settings"},
+		{"share dialog", linuxCaps, "Share every display"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := start(t, tc.caps)
+
+			h.bus.next(t, "permission check", is[bridge.CheckPermission])
+			h.bus.send(bridge.PermissionEvent{State: bridge.PermissionDenied})
+
+			got := h.bus.next(t, "permission status", status(ui.Permission)).(bridge.SetStatus)
+			if !got.PermissionButton || !contains(got.Detail, tc.want) {
+				t.Fatalf("status = %+v, want a permission button and %q", got.Status, tc.want)
+			}
+		})
+	}
+}
+
 func TestRevokedPermissionStopsCapture(t *testing.T) {
 	h := start(t, macCaps)
 	sc := h.grant(t, display1)["1"]
