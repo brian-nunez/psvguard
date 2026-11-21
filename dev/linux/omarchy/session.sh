@@ -4,7 +4,23 @@
 #
 #   psvguard-session            run the whole session (the container's command)
 #   psvguard-session hyprland   start Hyprland inside labwc (labwc runs this)
+#   psvguard-session run CMD…   run a command inside the running session (its Wayland display,
+#                               D-Bus and Hyprland instance), e.g. from docker exec
 set -euo pipefail
+
+if [[ "${1:-}" == run ]]; then
+	shift
+	# Waybar is started by Hyprland, so its environment names Hyprland's own Wayland display;
+	# Hyprland's environment names labwc's, the one it is nested in.
+	pid=$(pgrep -x waybar | head -n 1)
+	[[ -n "$pid" ]] || { echo "psvguard-session: the session is not running" >&2; exit 1; }
+	while IFS= read -r -d '' kv; do
+		case "$kv" in
+		WAYLAND_DISPLAY=* | DBUS_SESSION_BUS_ADDRESS=* | HYPRLAND_INSTANCE_SIGNATURE=* | XDG_*=*) export "${kv?}" ;;
+		esac
+	done <"/proc/$pid/environ"
+	exec "$@"
+fi
 
 logs=/tmp/session
 mkdir -p "$logs"
