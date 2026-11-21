@@ -558,7 +558,8 @@ static PGOverlay *pg_overlay(const char *display, GdkMonitor *m) {
 static void pg_overlay_set(const char *display, const double *rects, guint32 count, double fadeIn, double fadeOut) {
 	GdkMonitor *m = pg_monitor(display);
 	PGOverlay *o = g_hash_table_lookup(gOverlays, display);
-	if (!m || (!o && count == 0)) {
+	// Without layer-shell (GNOME) there are no covers; capabilities report canOverlay false.
+	if (!m || !gtk_layer_is_supported() || (!o && count == 0)) {
 		pg_emit(PGEvCoversShown, pg_dict("display", g_variant_new_string(display), "rects", g_variant_new_int32(0),
 		                                 "at", g_variant_new_int64(pg_now_ns()), NULL));
 		return;
@@ -922,13 +923,29 @@ static void pg_apply_controls(GVariant *controls) {
 
 static GDBusConnection *gSession;
 
+static guint32 gNotification; // the last notification's ID, which the next one replaces
+
+static void pg_on_notified(GObject *src, GAsyncResult *res, gpointer unused) {
+	GVariant *r = g_dbus_connection_call_finish(G_DBUS_CONNECTION(src), res, NULL);
+	if (!r) return;
+	g_variant_get(r, "(u)", &gNotification);
+	g_variant_unref(r);
+}
+
+// pg_notify shows a desktop notification with critical urgency: notification servers (GNOME's
+// among them) hide ordinary banners over full-screen apps, which is where flashing plays. Critical
+// notifications stay until dismissed, so each one replaces the one before.
 static void pg_notify(GVariant *d) {
 	if (!gSession) return;
+	GVariantBuilder hints;
+	g_variant_builder_init(&hints, G_VARIANT_TYPE_VARDICT);
+	g_variant_builder_add(&hints, "{sv}", "urgency", g_variant_new_byte(2));
+	g_variant_builder_add(&hints, "{sv}", "desktop-entry", g_variant_new_string("psvguard"));
 	g_dbus_connection_call(gSession, "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
 	                       "org.freedesktop.Notifications", "Notify",
-	                       g_variant_new("(susssasa{sv}i)", "PSV Guard", 0, "dialog-warning", pg_str(d, "title"),
-	                                     pg_str(d, "body"), NULL, NULL, -1),
-	                       NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
+	                       g_variant_new("(susssas@a{sv}i)", "PSV Guard", gNotification, "dialog-warning",
+	                                     pg_str(d, "title"), pg_str(d, "body"), NULL, g_variant_builder_end(&hints), -1),
+	                       G_VARIANT_TYPE("(u)"), G_DBUS_CALL_FLAGS_NONE, -1, NULL, pg_on_notified, NULL);
 }
 
 static void pg_on_sleep(GDBusConnection *c, const char *sender, const char *path, const char *iface,

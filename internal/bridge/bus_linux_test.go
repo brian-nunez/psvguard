@@ -171,16 +171,25 @@ func TestSmoke(t *testing.T) {
 	d := ds.Displays[0].ID
 	smokeBus.Post(SetCovers{Display: d, FadeIn: 0.15, FadeOut: 0.3, Rects: []Rect{{X: 0.25, Y: 0.25, W: 0.5, H: 0.5}}})
 
+	// Without overlays (GNOME) the command is answered with no covers shown.
+	want := 0
+	if caps.CanOverlay {
+		want = 1
+	}
+
 	shown, ok := next("covers shown").(CoversShown)
-	if !ok || shown.Display != d || shown.Rects != 1 || (caps.CanOverlay && shown.At <= 0) {
-		t.Fatalf("covers shown = %+v", shown)
+	if !ok || shown.Display != d || shown.Rects != want || shown.At <= 0 {
+		t.Fatalf("covers shown = %+v, want %d rects", shown, want)
 	}
 
 	time.Sleep(500 * time.Millisecond)
 	smokeBus.Post(ClearCovers{})
 
-	if shown, ok := next("covers cleared").(CoversShown); !ok || shown.Rects != 0 {
-		t.Fatalf("covers cleared = %+v", shown)
+	// Clearing reports each display that had covers; without overlays there were none.
+	if caps.CanOverlay {
+		if shown, ok := next("covers cleared").(CoversShown); !ok || shown.Rects != 0 {
+			t.Fatalf("covers cleared = %+v", shown)
+		}
 	}
 
 	// A stop for a stream that never started is answered, so its handle is released.
