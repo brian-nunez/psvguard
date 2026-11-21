@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- Headless host for the nested Hyprland. Its only window is Hyprland, shown full screen. -->
+<labwc_config>
+  <windowRules>
+    <windowRule identifier="*" serverDecoration="no">
+      <action name="ToggleFullscreen"/>
+    </windowRule>
+  </windowRules>
+</labwc_config>

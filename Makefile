@@ -1,6 +1,7 @@
 # psvguard build.
 #
-#   make build        build the Go binary into build/psvguard
+#   make build        build the Go binary into build/psvguard (on Linux, with the Wayland bus)
+#   make install-linux install the binary, desktop entry and icon under PREFIX (default ~/.local)
 #   make app          assemble and ad-hoc sign "dist/PSV Guard.app" (macOS)
 #   make run          build the app and start it with --verbose, logging to the terminal
 #   make test         race tests, the example-video and synthetic-clip tests (FFmpeg), and the
@@ -12,6 +13,9 @@
 #                     dist/SHA256SUMS
 #   make test-scripts test the release scripts
 #   make vet | lint | fmt | fmt-check | clean
+#   make dev-up [DESKTOP=omarchy|ubuntu]
+#                     start a Linux development desktop in Docker (noVNC on localhost:6081 or
+#                     :6082); make dev-shell opens a shell in it and make dev-down stops it
 #
 # Releases are made by GitHub Actions (.github/workflows/release.yml), not from a local machine.
 
@@ -28,7 +32,7 @@ APP   := $(DIST)/$(APP_NAME).app
 # The release archive keeps the same name in every release, so releases/latest/download/ links work.
 ZIP   := $(DIST)/PSV-Guard-macos.zip
 
-.PHONY: all build universal app release run test test-short test-portable test-scripts smoke vet lint fmt fmt-check clean
+.PHONY: all build universal app release run test test-short test-portable test-scripts smoke vet lint fmt fmt-check clean dev-up dev-shell dev-down install-linux
 
 all: app
 
@@ -86,6 +90,14 @@ release: universal $(BUILD)/AppIcon.icns
 run: app
 	"$(APP)/Contents/MacOS/psvguard" --verbose
 
+# Linux (Wayland, ADR-0008): the binary, a desktop entry and the icon. DESTDIR stages a package.
+PREFIX ?= $(HOME)/.local
+
+install-linux: build
+	install -Dm755 $(BUILD)/psvguard "$(DESTDIR)$(PREFIX)/bin/psvguard"
+	install -Dm644 packaging/linux/psvguard.desktop "$(DESTDIR)$(PREFIX)/share/applications/psvguard.desktop"
+	install -Dm644 assets/icon.svg "$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/psvguard.svg"
+
 # The race detector slows psv too much for the video tests, so they run separately without it.
 test: test-short
 	CGO_ENABLED=1 go test -count=1 -run 'TestExampleVideos|TestSyntheticClips' ./internal/monitor/
@@ -120,6 +132,21 @@ fmt:
 
 fmt-check:
 	golangci-lint fmt --diff ./...
+
+# Linux development desktops (dev/linux). Hyprland needs the host's GPU render node; on hosts with
+# NVIDIA's proprietary driver the image also gets the matching userspace driver.
+DESKTOP     ?= omarchy
+DEV_COMPOSE := docker compose -f dev/linux/docker-compose.yml $(if $(wildcard /sys/module/nvidia/version),-f dev/linux/docker-compose.nvidia.yml)
+DEV_ENV     := RENDER_GID=$$(stat -c %g /dev/dri/renderD128 2>/dev/null || echo 0) NVIDIA_VERSION=$$(cat /sys/module/nvidia/version 2>/dev/null)
+
+dev-up:
+	$(DEV_ENV) $(DEV_COMPOSE) up -d --build $(DESKTOP)
+
+dev-shell:
+	$(DEV_ENV) $(DEV_COMPOSE) exec $(DESKTOP) bash -l
+
+dev-down:
+	$(DEV_ENV) $(DEV_COMPOSE) down
 
 clean:
 	rm -rf $(BUILD) $(DIST)

@@ -1,0 +1,16 @@
+# GNOME defaults for the development desktop.
+
+# Serve the headless session over VNC (grdctl's "enable" also needs systemd, which is absent).
+[org.gnome.desktop.remote-desktop.vnc.headless]
+enable=true
+port=5900
+
+# Never blank or lock the screen.
+[org.gnome.desktop.session]
+idle-delay=uint32 0
+
+[org.gnome.desktop.screensaver]
+lock-enabled=false
+
+[org.gnome.desktop.notifications]
+show-in-lock-screen=false

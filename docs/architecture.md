@@ -2,8 +2,8 @@
 
 PSV Guard captures every display, watches each one with [psv](https://github.com/brian-nunez/psv)'s
 live `Analyzer.Watch`, and covers the parts of the screen where flashing builds up. All logic is
-Go. The platform layer (on macOS, Objective-C in cgo preambles) only executes commands and reports
-events.
+Go. The platform layer (on macOS, Objective-C in cgo preambles; on Linux, C in cgo preambles
+against GTK, the screen cast portal and PipeWire) only executes commands and reports events.
 
 Decisions that shape this design are recorded in [`docs/adr/`](adr/README.md).
 
@@ -34,11 +34,14 @@ ScreenCaptureKit ──BGRA, ~640 px wide, on change──▶ goCaptureFrame ─
                        └─ Report (only when the covers change) ──▶ controller ──▶ Outbox ──▶ pg_post
 ```
 
-1. **Capture.** One ScreenCaptureKit stream per display, scaled by the GPU to about 640 px wide
-   with the display's aspect ratio, in BGRA and sRGB. The filter excludes PSV Guard's own
-   windows, so covers never reach the analysis.
+1. **Capture.** On macOS, one ScreenCaptureKit stream per display, scaled by the GPU to about
+   640 px wide with the display's aspect ratio, in BGRA and sRGB. The filter excludes PSV Guard's
+   own windows, so covers never reach the analysis. On Linux, one PipeWire stream per display from
+   the screen cast portal, at full resolution in BGRx or BGRA; the capture includes the covers
+   (see "Without capture exclusion" below).
 2. **Hand-off.** `goCaptureFrame` runs on the capture queue while the pixel buffer is locked. It
-   converts the buffer straight into a pooled `psv.Frame` (honouring row padding) and puts it in a
+   converts the buffer straight into a pooled `psv.Frame` (honouring row padding, and
+   area-averaging a larger buffer down to the frame size) and puts it in a
    channel of size one, replacing a frame analysis has not taken yet. No pooled frame free means
    the new frame is dropped. Nothing is allocated per frame and no C pointer is kept.
 3. **Resampling.** ScreenCaptureKit sends frames only when the screen changes; psv assumes a fixed
@@ -108,6 +111,8 @@ internal/app/         controller: events in, commands out; one monitor per displ
 internal/bridge/      the platform contract: event and command kinds, payload codecs, Outbox, EventQueue
                       bus_darwin.go     the cgo bridge: goEvent, goCaptureFrame, pg_post wrappers
                       native_darwin.go  all Objective-C: menu bar, panel, ScreenCaptureKit, cover panels
+                      bus_linux.go      the same for Linux (Wayland)
+                      native_linux.go   all C: AppIndicator item, GTK panel, layer-shell covers, portal, PipeWire
                       bus_other.go      "not yet supported on this platform"
 internal/monitor/     one display's analysis: Pipeline (resample → Watch → coverage) and Display (goroutine + fast path)
 internal/coverage/    the covering policy: hot cells, fill, hold, merging, full-display cut-over, grid → normalised rects
@@ -194,13 +199,22 @@ Spaces that never steals focus. There is no Dock icon. Cover windows are borderl
 panels at screen-saver level on every Space and over full-screen apps; they never become key and
 hold one layer per rectangle, whose opacity Core Animation fades with the durations in the command.
 
+On Linux the menu bar item is a StatusNotifierItem through libayatana-appindicator3, shown by the
+bar's tray (Omarchy's shell, Waybar, Ubuntu's AppIndicator extension); its menu has the status, the
+on/off toggle, Show Panel and Quit. Without a tray host the panel opens at launch. The panel is a
+GTK 3 window: a `wlr-layer-shell` surface below the bar on the top right where the compositor has
+layer-shell, an ordinary window elsewhere; it takes the keyboard only when clicked. Covers are one
+layer-shell overlay surface per display with an empty input region, painting one rectangle per
+cover whose opacity eases with the durations in the command. The permission button reads
+**Share Screen…** and asks the portal again from a fresh choice.
+
 ## Threads
 
 | Thread | Work |
 | --- | --- |
-| main (AppKit run loop) | status item, panel, cover layers, applying commands, starting and stopping streams |
-| ScreenCaptureKit sample queue (one per stream) | `goCaptureFrame`: one conversion into a pooled frame |
-| serial event queue | calls `goEvent` |
+| main (AppKit run loop; on Linux, the GTK main loop) | status item, panel, cover layers, applying commands, portal calls, starting and stopping streams |
+| ScreenCaptureKit sample queue (one per stream); on Linux, the PipeWire thread | `goCaptureFrame`: one conversion into a pooled frame |
+| serial event queue; on Linux, an event thread | calls `goEvent` |
 | one goroutine per display | resampling, `Watch`, coverage |
 | controller goroutine | events, reports, settings, status |
 | outbox goroutine | every `pg_post` |
@@ -223,8 +237,8 @@ Neither the main thread nor a capture queue ever blocks on Go.
 
 ## Adding a platform
 
-A new OS needs one bus: a `bridge.New` behind a build tag (for Linux, `bus_linux.go`, with
-`bus_other.go`'s tag narrowed to exclude it) that
+A new OS needs one bus: a `bridge.New` behind a build tag (as `bus_darwin.go` and `bus_linux.go`
+are, with `bus_other.go`'s tag narrowed to exclude it) that
 
 1. sends a capabilities event first, then displays, a permission state and ready;
 2. delivers frames as `FrameTarget.CaptureFrame` calls in one of the `frame.Format`s, from the
@@ -236,15 +250,39 @@ A new OS needs one bus: a `bridge.New` behind a build tag (for Linux, `bus_linux
 Nothing else changes. The controller already handles capture that includes the covers
 (`excludesOwnWindows: false`), no overlays (`canOverlay: false`, warnings and a notification
 instead) and consent every session (`consentPerSession: true`); its tests run under those
-capabilities. [ADR-0004](adr/0004-keep-the-core-platform-neutral-and-add-linux-as-a-second-bus.md)
-lists what X11 and Wayland will need. Packaging gets its own Makefile target (for Linux, a binary
-and a `.desktop` file).
+capabilities. Packaging gets its own Makefile target (`make app` on macOS, `make install-linux` on
+Linux).
+
+## The Linux bus
+
+[ADR-0008](adr/0008-add-a-wayland-bus-for-linux.md) records the choices; in brief:
+
+- **Session.** Wayland only: `bridge.New` fails outside one, and GTK is limited to its Wayland
+  backend.
+- **Consent.** Permission is `needsConsent` until a portal session starts, then `granted`, or
+  `denied` once the user cancels the share dialog. Each session asks for monitors with
+  `persist_mode` 2 and keeps its restore token, so later launches skip the dialog. Hyprland's
+  dialog shares one monitor at a time: a display no session shows gets one more dialog of its own,
+  once per run, and its stream fails with "This display is not shared" until then.
+- **Displays.** GDK's monitors, in logical pixels. A display's ID is its model and position (GTK 3
+  has no connector names). Portal streams are matched to displays by position and size.
+- **Frames.** PipeWire delivers shared-memory buffers when the screen changes; the stream's process
+  callback passes each to `goCaptureFrame` with a monotonic timestamp. Stopping destroys the
+  stream under the thread loop's lock, which waits for a callback in flight, before the stopped
+  event releases the handle.
+- **Events.** Hyprland's event socket gives workspace and full-screen changes as transitions;
+  logind's `PrepareForSleep` gives sleep and wake; notifications go through
+  `org.freedesktop.Notifications` with critical urgency, since notification servers (GNOME's
+  among them) hide ordinary banners over full-screen apps, and each replaces the one before.
+- **Capabilities.** `excludesOwnWindows: false`, `canOverlay` when the compositor has layer-shell
+  (not on GNOME), `perDisplayCapture: true`, `consentPerSession: true`, `BGRx` and `BGRA`.
 
 ## Settings and data
 
 Settings resolve default, then saved, then flag. They are saved as JSON in
 `os.UserConfigDir()/psvguard/settings.json`: `~/Library/Application Support/psvguard` on macOS and
-`~/.config/psvguard` on Linux. Nothing else is stored.
+`~/.config/psvguard` on Linux. On Linux, `state.json` beside it keeps the screen cast portal's
+restore tokens. Nothing else is stored.
 
 ## Performance
 
@@ -266,6 +304,18 @@ psv's decided-region search allocates about 3.5 MB per frame while a whole 640×
 memory limit (`GOMEMLIMIT` overrides it) to keep the heap from growing to many times its live
 size, about 50 MB per display.
 
+On Linux, measured only in the development desktop of `dev/linux` (Hyprland nested in a headless
+labwc, rendered on the host's GPU, one 1600×900 display, 4 CPUs allowed, Intel i5-12400F); real
+hardware will differ:
+
+| Measure | Value |
+| --- | --- |
+| Frames delivered by the portal while a video plays | 25–42 per second (the nested session's own rate) |
+| Capture callback (area-averaging 1600×900 into 640×360) | 3.3–7 ms mean; 2560×1440 takes about 4 ms in a warm benchmark |
+| Time per `Watch` | 1–5 ms, with spikes when the container's CPUs are busy |
+| CPU | about 21% of one core idle, 44% while a full-screen flashing video plays |
+| Memory | 136–194 MB resident |
+
 ## Testing
 
 - Pure-Go unit tests for every package, run under `-race`, on Linux builds and with
@@ -281,6 +331,11 @@ size, about 50 MB per display.
   Synthetic clips generated by FFmpeg add full-screen flashing (covered before failing) and fast,
   slow and dark-mode scrolling text and a sliding page (never covered). Failing videos must have
   no misses.
+- `internal/bridge` on Linux tests `pg_norm_to_px`, the C side's JSON round trip (types and
+  escapes intact, malformed input empty) and the Wayland check, plus a smoke test in a Wayland
+  session (`make smoke` there) that checks the startup events, shows and clears a cover (on
+  GNOME, answers the cover command with none shown) and answers a stop for an unknown stream. It
+  passes in both development desktops.
 - `internal/bridge` tests the payloads, the binary cover layout, the outbox and the event queue;
   on macOS also `pg_norm_to_points` at 1× and 2× and on a second display, and a smoke test
   (`make smoke`, needs Screen Recording permission) that captures the main display, shows a cover
@@ -294,6 +349,8 @@ size, about 50 MB per display.
 - Spatial patterns (stripes, checkerboards); psv does not detect them.
 - Flashing smaller than the minimum area, or whose fill stays low before psv decides it fails:
   the decided backstop covers it about a second after its first failing frame.
-- Platforms other than macOS (Linux is designed for but not implemented).
+- Linux X11 sessions, and covers on GNOME, which offers no supported overlay on Wayland (PSV Guard
+  warns there instead).
+- Platforms other than macOS and Linux.
 - Notarisation, auto-update and launch at login. Releases are ad-hoc signed, so macOS asks once
   before the first launch ([ADR-0007](adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)).

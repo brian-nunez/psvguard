@@ -11,3 +11,4 @@ Decisions that shape this project, in [MADR](https://adr.github.io/madr/) format
 | [0005](0005-ship-macos-builds-as-an-ad-hoc-signed-app-bundle.md) | Ship macOS builds as an ad-hoc signed .app bundle | accepted | 2026-11-09 |
 | [0006](0006-start-covers-from-fill-gated-hot-cells-with-a-decided-backstop.md) | Start covers from fill-gated hot cells, with psv's decided results as a backstop | accepted | 2026-11-14 |
 | [0007](0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md) | Publish ad-hoc signed universal builds on GitHub Releases | accepted | 2026-11-14 |
+| [0008](0008-add-a-wayland-bus-for-linux.md) | Add a Wayland bus for Linux, with the screen cast portal, PipeWire and layer-shell covers | accepted | 2026-11-21 |

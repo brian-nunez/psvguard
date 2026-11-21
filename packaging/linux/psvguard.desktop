@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=PSV Guard
+GenericName=Screen flash guard
+Comment=Covers flashing on screen to reduce exposure for photosensitive users (experimental aid)
+Exec=psvguard
+Icon=psvguard
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=photosensitive;epilepsy;flashing;accessibility;
+StartupNotify=false

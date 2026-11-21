@@ -550,6 +550,11 @@ func (c *Controller) status() ui.Status {
 	case c.perm != bridge.PermissionGranted && c.perm != bridge.PermissionUnknown:
 		st.State, st.Title, st.PermissionButton = ui.Permission, "Screen capture permission needed", true
 		st.Detail = "Allow PSV Guard to capture the screen in your system settings, then quit and reopen PSV Guard."
+
+		if c.caps.ConsentPerSession {
+			// The platform asks in a share dialog rather than a settings page.
+			st.Detail = "Share every display with PSV Guard when the system asks, and choose to remember the choice."
+		}
 	case c.perm == bridge.PermissionUnknown:
 		st.State, st.Title = ui.Starting, "Checking screen capture permission…"
 	case !c.s.Enabled:

@@ -16,6 +16,7 @@
 <p align="center">
   <img alt="Written in Go" src="https://img.shields.io/badge/written%20in-Go-e11d48?style=flat-square&logo=go&logoColor=white">
   <img alt="Runs on macOS" src="https://img.shields.io/badge/runs%20on-macOS-be123c?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Runs on Linux (Wayland)" src="https://img.shields.io/badge/runs%20on-Linux%20(Wayland)-be123c?style=flat-square&logo=linux&logoColor=white">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-e11d48?style=flat-square">
   <a href="https://github.com/brian-nunez/psvguard/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/brian-nunez/psvguard/ci.yml?branch=main&style=flat-square&logo=github&label=CI"></a>
   <a href="https://github.com/brian-nunez/psvguard/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/brian-nunez/psvguard?style=flat-square&logo=github&color=be123c"></a>
@@ -100,6 +101,33 @@ tccutil reset ScreenCapture com.briannunez.psvguard
 
 PSV Guard runs on macOS 14 or later. Building needs Go 1.25 or later, the Xcode Command Line Tools and FFmpeg (used by the tests).
 
+### Linux (Wayland)
+
+PSV Guard runs in Wayland sessions; X11 sessions are not supported. On Omarchy (Hyprland) and other compositors with `wlr-layer-shell` it covers flashing as on macOS. On GNOME, including Ubuntu's default desktop, apps cannot draw over other apps, so PSV Guard warns instead: its status turns to a warning and a notification asks you to look away. The notification is sent as critical, which GNOME shows even over full-screen video, and each new warning replaces the last one.
+
+Build it from source. On Omarchy or Arch:
+
+```sh
+sudo pacman -S --needed go pkgconf gtk3 gtk-layer-shell libayatana-appindicator pipewire
+```
+
+On Ubuntu:
+
+```sh
+sudo apt install golang-go pkg-config libgtk-3-dev libgtk-layer-shell-dev libayatana-appindicator3-dev libpipewire-0.3-dev
+```
+
+Then build and install it under `~/.local` (the binary, a desktop entry and the icon), and start it:
+
+```sh
+make install-linux
+psvguard
+```
+
+On first launch the system asks which screen to share. Choose a display and tick the option to remember the choice, so later launches skip the dialog. Hyprland's dialog shares one monitor at a time, so with several monitors it opens once more for each display not yet shared. The item in the bar's tray opens a menu with the status, the on/off toggle, the panel and Quit. **Share Screen…** in the panel asks again from a fresh choice.
+
+Screen capture on Linux includes PSV Guard's own covers, so content under a cover is not analysed: a cover over content that keeps flashing lifts after the calm time (3 seconds by default) and returns as soon as the flashing is seen again.
+
 ## Screenshots
 
 | Without PSV Guard | With PSV Guard |
@@ -143,8 +171,10 @@ Other flags: `--verbose` logs decisions and per-display stats (frame rate, time 
 
 | Platform | Status |
 | -------- | ------ |
-| **macOS** | Supported |
-| Linux | Next |
+| **macOS** 14+ | Supported |
+| **Linux, Wayland** with `wlr-layer-shell` (Omarchy / Hyprland, KDE, Sway) | Supported; built from source |
+| **Linux, GNOME on Wayland** (Ubuntu) | Warnings only: GNOME lets no app draw over others |
+| Linux, X11 | Not supported ([ADR-0008](docs/adr/0008-add-a-wayland-bus-for-linux.md)) |
 
 Everything except the native capture and drawing layer is plain Go, so adding a platform means adding that one layer.
 
@@ -153,16 +183,20 @@ Everything except the native capture and drawing layer is plain Go, so adding a 
 ```sh
 make test                      # race tests, psv's example videos, synthetic clips, Linux and no-cgo builds
 make test-short                # the same without the video tests
-make smoke                     # capture smoke test (needs Screen Recording permission for the terminal)
+make smoke                     # capture smoke test (macOS: Screen Recording permission; Linux: a Wayland session)
 make lint                      # golangci-lint, configured in .golangci.yml
 make fmt-check                 # fail if formatting would change anything
 make run                       # build the app and run it with --verbose in the terminal
 make release                   # build the universal app, zip it and write SHA256SUMS into dist/
+make dev-up DESKTOP=omarchy    # Linux: a Hyprland desktop in Docker, at http://localhost:6081/ through noVNC
+make dev-up DESKTOP=ubuntu     # Linux: Ubuntu 26.04's GNOME desktop, at http://localhost:6082/ (VNC password psvguard)
 ```
+
+Linux work is built and checked inside the Docker desktops in [`dev/linux`](dev/linux), so nothing runs in your own session. `make dev-shell` opens a shell there (`DESKTOP=ubuntu` for the GNOME one, where every shell is already in the session); in the Hyprland desktop, `psvguard-session run <command>` runs a command in its Wayland session, for example `psvguard-session run ./build/psvguard --verbose` or `psvguard-session run make smoke`. Hyprland needs the host's GPU; on hosts with NVIDIA's proprietary driver the image installs the matching userspace driver.
 
 ### Releases
 
-Releases are made by GitHub Actions, not from a local machine. The [CI workflow](.github/workflows/ci.yml) checks formatting, vet, lint and `make test` on macOS, builds the release app, and runs the core's tests on Linux without cgo, on each pull request and push to `main`. When CI passes on `main`, the [Release workflow](.github/workflows/release.yml) works out the next version from the [Conventional Commits](https://www.conventionalcommits.org/) since the last tag with [`scripts/next-version.sh`](scripts/next-version.sh), builds PSV Guard.app for Apple silicon and Intel, signs it ad hoc, and publishes it zipped with `SHA256SUMS` as a GitHub release ([ADR-0007](docs/adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)).
+Releases are made by GitHub Actions, not from a local machine. The [CI workflow](.github/workflows/ci.yml) checks formatting, vet, lint and `make test` on macOS, builds the release app, builds and tests the Linux bus on Ubuntu, and runs the core's tests on Linux without cgo, on each pull request and push to `main`. When CI passes on `main`, the [Release workflow](.github/workflows/release.yml) works out the next version from the [Conventional Commits](https://www.conventionalcommits.org/) since the last tag with [`scripts/next-version.sh`](scripts/next-version.sh), builds PSV Guard.app for Apple silicon and Intel, signs it ad hoc, and publishes it zipped with `SHA256SUMS` as a GitHub release ([ADR-0007](docs/adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)).
 
 | Commits since the last tag | Release |
 | -------------------------- | ------- |

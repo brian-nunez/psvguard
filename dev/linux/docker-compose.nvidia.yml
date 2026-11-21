@@ -1,0 +1,19 @@
+# GPU access for hosts with NVIDIA's proprietary driver, added to docker-compose.yml:
+#
+#   NVIDIA_VERSION=$(cat /sys/module/nvidia/version) \
+#     docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up -d --build omarchy
+
+services:
+  omarchy:
+    build:
+      args:
+        NVIDIA_VERSION: "${NVIDIA_VERSION:?set NVIDIA_VERSION to the host driver version}"
+    image: psvguard-dev-omarchy:1-nvidia-${NVIDIA_VERSION}
+    devices:
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-modeset:/dev/nvidia-modeset
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+    environment:
+      __GLX_VENDOR_LIBRARY_NAME: nvidia
+      GBM_BACKEND: nvidia-drm

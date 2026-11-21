@@ -1,0 +1,9 @@
+// A bar with a tray, standing in for Omarchy's shell, which also hosts StatusNotifierItems.
+{
+  "layer": "top",
+  "position": "top",
+  "height": 28,
+  "modules-left": ["hyprland/workspaces"],
+  "modules-right": ["tray", "clock"],
+  "tray": { "spacing": 8 }
+}
