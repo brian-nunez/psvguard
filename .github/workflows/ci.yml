@@ -72,6 +72,46 @@ jobs:
             exit 1
           fi
 
+  linux:
+    name: Linux Wayland bus
+    # The Linux bus is cgo against GTK 3, gtk-layer-shell, AppIndicator and PipeWire (ADR-0008).
+    # Its smoke test needs a Wayland session and runs by hand in dev/linux; this job builds the bus,
+    # lints and vets it, and runs every test that needs no session.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Install the bus's libraries and FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libgtk-3-dev libgtk-layer-shell-dev \
+            libayatana-appindicator3-dev libpipewire-0.3-dev ffmpeg
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
+          install-only: true
+
+      - name: Lint
+        run: make lint
+
+      - name: Vet
+        run: make vet
+
+      - name: Test
+        run: make test
+
+      - name: Install into a staging folder
+        run: |
+          make install-linux DESTDIR="$RUNNER_TEMP/stage" PREFIX=/usr
+          "$RUNNER_TEMP/stage/usr/bin/psvguard" --version
+
   portable:
     name: Linux core without cgo
     # Everything except the macOS bus must build, vet and test on Linux without cgo (ADR-0004).
