@@ -32,7 +32,7 @@ Which session types does the Linux bus support, how does it capture the screen, 
 Chosen option: "Wayland only", because both target desktops are Wayland sessions, X11 is legacy on both, and the portal is the one capture path every Wayland desktop supports.
 
 * **Session.** The bus runs only in a Wayland session (`WAYLAND_DISPLAY` set). Elsewhere `bridge.New` fails with a plain error that says PSV Guard needs a Wayland session; under X11 it does not fall back to Xwayland.
-* **Capture.** `org.freedesktop.portal.ScreenCast` over D-Bus (GIO's GDBus) selects monitors, with `persist_mode` 2 so the user approves once; the portal's restore token is kept in `os.UserConfigDir()/psvguard/state.json`. Frames arrive from PipeWire (`libpipewire-0.3`) as BGRx or BGRA in shared memory, only when the screen changes, and are passed to `goCaptureFrame` from PipeWire's thread. Portal streams are matched to displays by their reported position and size.
+* **Capture.** `org.freedesktop.portal.ScreenCast` over D-Bus (GIO's GDBus) selects monitors, with `persist_mode` 2 so the user approves once; each session's restore token is kept in `os.UserConfigDir()/psvguard/state.json`. Some share dialogs (Hyprland's) offer one monitor at a time, so a display that no session shows gets one more dialog of its own, once per run. Frames arrive from PipeWire (`libpipewire-0.3`) as BGRx or BGRA in shared memory, only when the screen changes, and are passed to `goCaptureFrame` from PipeWire's thread. Portal streams are matched to displays by their reported position and size.
 * **Downscaling in Go.** The portal delivers each display at full resolution, so `frame.Convert` area-averages a larger buffer into the analysed frame size, reading it once and allocating nothing.
 * **Displays.** GDK's monitors, in logical pixels with their scale factor. GTK 3 does not expose Wayland connector names, so a display's ID is built from its model and position.
 * **Covers.** One `wlr-layer-shell` overlay surface per display (gtk-layer-shell), with an empty input region, holding one opaque rectangle per cover; opacity fades with the command's durations. Where the compositor has no layer-shell (GNOME), the bus reports `canOverlay: false` and the controller warns with its status and a notification instead.
@@ -48,7 +48,7 @@ Chosen option: "Wayland only", because both target desktops are Wayland sessions
 * Good, because both target desktops get capture, and Omarchy gets covers, without changing the contract or the core.
 * Good, because the portal and PipeWire are the same on every Wayland desktop, so KDE and other layer-shell compositors need no new code.
 * Bad, because on GNOME PSV Guard can only warn: GNOME has no supported way for an app to draw over others on Wayland.
-* Bad, because the first run asks the user to share their screen, and a display added later may need another approval.
+* Bad, because the first run asks the user to share their screen, once per display where the dialog offers one monitor at a time, and a display added later needs another approval.
 * Bad, because capture includes the covers, so covered content is not analysed until the hold expires (the no-exclusion fallback of ADR-0004).
 * Bad, because full-resolution frames cost more CPU than macOS's GPU-scaled capture: downscaling a 2560×1440 frame takes about 4 ms on the development machine.
 * Neutral, because X11 sessions are not supported; users of X11-only desktops run a Wayland session or wait for a separate decision.

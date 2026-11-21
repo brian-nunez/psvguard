@@ -1,6 +1,6 @@
 # psvguard
 
-PSV Guard (`psvguard`) is a menu bar app that captures every display in real time, streams the frames through Brian's photosensitivity detector [psv](https://github.com/brian-nunez/psv) (`Analyzer.Watch`), and covers the parts of the screen that start flashing, to reduce exposure for photosensitive users. It is written in Go, with thin Objective-C bindings for macOS. macOS is the first platform; Linux is next, in Wayland sessions only (Omarchy's Hyprland with covers, Ubuntu's GNOME with warnings only), as a second bus implementation ([ADR-0008](docs/adr/0008-add-a-wayland-bus-for-linux.md)). Stage: v1 on macOS, released by GitHub Actions as an ad-hoc signed universal app ([ADR-0007](docs/adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)), or built from source.
+PSV Guard (`psvguard`) is a menu bar app that captures every display in real time, streams the frames through Brian's photosensitivity detector [psv](https://github.com/brian-nunez/psv) (`Analyzer.Watch`), and covers the parts of the screen that start flashing, to reduce exposure for photosensitive users. It is written in Go, with thin Objective-C bindings for macOS and thin C bindings for Linux. macOS is the first platform; Linux runs in Wayland sessions only (Omarchy's Hyprland with covers, Ubuntu's GNOME with warnings only), as a second bus implementation ([ADR-0008](docs/adr/0008-add-a-wayland-bus-for-linux.md)). Stage: v1 on macOS, released by GitHub Actions as an ad-hoc signed universal app ([ADR-0007](docs/adr/0007-publish-ad-hoc-signed-universal-builds-on-github-releases.md)), or built from source.
 
 It is an experimental aid: it reduces exposure but does not eliminate it, and it does not detect spatial patterns. Keep that wording in user-facing text.
 
@@ -24,26 +24,30 @@ Product requirements. Do not break them; stop and ask Brian before working aroun
 cmd/psvguard/       flags, settings, wiring; bridge.New picks the platform's bus
 internal/app/       controller (events in, commands out); tests use the fake bus in app_test.go
 internal/bridge/    contract.go (kinds, payloads, binary cover layout), outbox.go, queue.go, bus.go;
-                    bus_darwin.go (Go side, //export) + native_darwin.go (all Objective-C); bus_other.go
+                    bus_darwin.go (Go side, //export) + native_darwin.go (all Objective-C);
+                    bus_linux.go (Go side, //export) + native_linux.go (all C); bus_other.go
 internal/monitor/   per-display Pipeline (resample → Watch → coverage) and Display (goroutine + fast path)
 internal/coverage/  the covering policy; pure functions on psv.Building
 internal/resample/  internal/frame/  internal/settings/  internal/ui/
 packaging/macos/    Info.plist template
+packaging/linux/    desktop entry
+dev/linux/          Docker desktops (Hyprland; Ubuntu GNOME) reached through noVNC, for Linux work
 scripts/            release scripts (next-version.sh), tested by make test-scripts
 .github/workflows/  ci.yml (every pull request and push to main), release.yml (after CI passes on main)
 docs/whitepaper/    LaTeX white paper; figdata/ (build tag whitepaper) regenerates its data and figures
 ```
 
-- Only `internal/bridge/*_darwin.go` may know it runs on macOS. Every other package is pure Go and must build with `GOOS=linux` and `CGO_ENABLED=0`.
-- Darwin files use `//go:build darwin && cgo`; `bus_other.go` uses `//go:build !darwin || !cgo` and returns `ErrUnsupported`. A Linux bus goes in `bus_linux.go`, narrowing `bus_other.go`'s tag.
-- cgo forbids C definitions in a preamble next to `//export`, so Objective-C definitions go in `native_darwin.go` and exports in `bus_darwin.go`.
-- Event and command kinds live in `contract.go`; `native_darwin.go` mirrors them in enums marked "Must match". Change both together, plus the tables in `docs/architecture.md`.
-- Geometry crossing the bus is normalised (0–1, top-left origin per display). `pg_norm_to_points` converts it on macOS and is tested through `normToPoints` in `bus_darwin_test.go`.
+- Only `internal/bridge/*_darwin.go` and `*_linux.go` may know the platform. Every other package is pure Go and must build with `GOOS=linux` and `CGO_ENABLED=0`.
+- Darwin files use `//go:build darwin && cgo`, Linux files `//go:build linux && cgo`; `bus_other.go` uses `//go:build !(darwin || linux) || !cgo` and returns `ErrUnsupported`.
+- cgo forbids C definitions in a preamble next to `//export`, so native definitions go in `native_*.go` and exports in `bus_*.go`.
+- Event and command kinds live in `contract.go`; `native_darwin.go` and `native_linux.go` mirror them in enums marked "Must match". Change all three together, plus the tables in `docs/architecture.md`.
+- Geometry crossing the bus is normalised (0–1, top-left origin per display). `pg_norm_to_points` converts it on macOS (tested through `normToPoints` in `bus_darwin_test.go`), `pg_norm_to_px` on Linux (through `normToPx` in `bus_linux_test.go`).
+- The Linux C side parses command JSON into GVariants and writes event JSON from them; `jsonRoundTrip` tests that code.
 - New settings go in `settings.Fields` only; flags, the saved file and panel controls follow from it.
 
 ## Commands
 
-Toolchain: Go 1.25+ (psv requires it), Xcode Command Line Tools, FFmpeg (`ffmpeg -version`), golangci-lint v2.
+Toolchain: Go 1.25+ (psv requires it), FFmpeg (`ffmpeg -version`), golangci-lint v2; on macOS the Xcode Command Line Tools; on Linux pkg-config and the development packages of GTK 3, gtk-layer-shell, libayatana-appindicator3 and libpipewire-0.3 (all in the `dev/linux` images).
 
 | Task | Command |
 | --- | --- |
@@ -52,7 +56,8 @@ Toolchain: Go 1.25+ (psv requires it), Xcode Command Line Tools, FFmpeg (`ffmpeg
 | Run with logs in the terminal | `make run` (the app with `--verbose`) |
 | All tests | `make test` (race tests, example videos, synthetic clips, Linux and no-cgo builds; about a minute) |
 | Quick tests | `make test-short` |
-| Capture smoke test | `make smoke` (needs Screen Recording permission for the terminal) |
+| Capture smoke test | `make smoke` (macOS: needs Screen Recording permission for the terminal; Linux: run in the Wayland session, `psvguard-session run make smoke` in `dev/linux`) |
+| Install on Linux | `make install-linux` (binary, desktop entry and icon under `PREFIX`, default `~/.local`) |
 | Vet, lint, format | `make vet`, `make lint`, `make fmt`, `make fmt-check` |
 | Release files | `make release VERSION=vX.Y.Z` (universal app, `dist/PSV-Guard-macos.zip`, `dist/SHA256SUMS`). Releases are made by GitHub Actions, never locally. |
 | Release scripts | `make test-scripts` |
@@ -67,18 +72,18 @@ Running `dist/PSV Guard.app/Contents/MacOS/psvguard` from a terminal uses the te
 1. `make fmt-check` reports no changes.
 2. `make lint` reports 0 issues, and `make vet` passes.
 3. `make test` passes: `go test -race -short ./...`, the example-video and synthetic-clip tests (without `-race`, which makes them too slow), and the Linux and `CGO_ENABLED=0` builds.
-4. After a change to the bridge or `native_darwin.go`, `make smoke` passes and `make run` shows covers on psv's failing example videos.
+4. After a change to the bridge or a `native_*.go` file, `make smoke` passes on that platform and the app shows covers on psv's failing example videos (macOS: `make run`; Linux: in the Hyprland desktop of `dev/linux`, with `ffplay -fs`).
 5. Docs (`README.md`, `docs/architecture.md`, ADRs) are updated if behaviour, flags, settings, the bus protocol, build steps or layout changed.
 
 ## Conventions
 
-- **cgo:** `#cgo CFLAGS: -x objective-c -fobjc-arc`, frameworks in `#cgo LDFLAGS`. C functions use the `pg_` prefix. Go callbacks are `//export`ed and declared `extern` in the preamble that calls them, not taken from `_cgo_export.h`. Native code never knows Go types; low-rate payloads are JSON.
+- **cgo:** on macOS `#cgo CFLAGS: -x objective-c -fobjc-arc`, frameworks in `#cgo LDFLAGS`; on Linux `#cgo pkg-config` for the GTK libraries. C functions use the `pg_` prefix. Go callbacks are `//export`ed and declared `extern` in the preamble that calls them, not taken from `_cgo_export.h`. Native code never knows Go types; low-rate payloads are JSON.
 - **Bus rules:** never call `pg_post` from an exported callback; one outbound goroutine owns every `pg_post`, coalesces, and posts covers only when they change. A query is a command plus an answering event.
 - **Frame path:** `goCaptureFrame` converts the locked buffer, honouring `bytesPerRow`, straight into a pooled `psv.Frame`; no intermediate copy, no `C.CString`, `C.GoBytes` or new slices per frame. Count every dropped frame in stats.
-- **Main thread:** `runtime.LockOSThread()` in `init`; the AppKit run loop owns the main thread until quit. All AppKit work goes through the main dispatch queue.
-- **Cover panels:** borderless, click-through, on all Spaces, full-screen auxiliary, never key, never activating. The settings panel never steals focus.
+- **Main thread:** `runtime.LockOSThread()` in `init`; the AppKit run loop (macOS) or the GTK main loop (Linux) owns the main thread until quit. All AppKit work goes through the main dispatch queue, all GTK work through the default main context.
+- **Cover panels:** borderless, click-through, on all Spaces, full-screen auxiliary, never key, never activating; on Linux, one `wlr-layer-shell` overlay surface per display with an empty input region and no keyboard. The settings panel never steals focus.
 - **Settings** resolve default → saved → flag, and live under `os.UserConfigDir()/psvguard`.
-- **Tests:** controller tests use the fake bus and run under both macOS-like and Linux-like capabilities. Extend the fakes rather than adding real dependencies. Tests that need Screen Recording permission or FFmpeg skip cleanly when it is missing.
+- **Tests:** controller tests use the fake bus and run under both macOS-like and Linux-like capabilities. Extend the fakes rather than adding real dependencies. Tests that need Screen Recording permission, a Wayland session or FFmpeg skip cleanly when it is missing.
 - **Go style:** follow `.golangci.yml` (configured like bvoice's). Fix findings rather than adding `//nolint`. Wrap errors with context; user-facing errors say what failed in plain words. Logging goes to an injected logger, to stderr only with `--verbose`.
 - **Comments and docs** describe the code as it is: no references to planning chats, who decided what, or roadmaps outside ADRs.
 - Report measured numbers (latency, CPU, memory, drops, false triggers) honestly, including ones that miss expectations.
@@ -89,6 +94,10 @@ Running `dist/PSV Guard.app/Contents/MacOS/psvguard` from a terminal uses the te
 - **Boxing booleans in Objective-C:** `@(x != 0)` becomes a JSON number; use `x ? @YES : @NO`. Event decoding fails otherwise.
 - **Handle lifetime:** a stream's `cgo.Handle` is deleted on its stopped event. That event must be emitted only after the stream's sample queue drains (`PGStream reportStopped`), or a late frame callback panics on an invalid handle.
 - **Memory:** psv's region search allocates several MB per frame while the screen flashes. That is psv's, not a leak; `main` sets a soft memory limit.
+- **Linux capture includes the covers** (`excludesOwnWindows: false`): covered content is not analysed, so a cover over content that keeps flashing lifts after the calm time and returns once the flashing is seen again.
+- **Portal restore tokens are single use.** A failed restore (a portal backend on the wrong Wayland display, say) consumes the token and the share dialog appears again. In `dev/linux`, start programs with `psvguard-session run`, which takes the session's environment from Waybar; Hyprland's own environment names labwc's display.
+- **`libpipewire-0.3.pc` adds `-fno-strict-overflow`**, which cgo refuses, so `native_linux.go` spells out PipeWire's include paths instead of using `#cgo pkg-config` for it.
+- **`pkill -f` in `docker exec bash -c`** matches its own shell's command line and kills it; anchor the pattern (`pkill -f '^name'`).
 - **Driving QuickTime with `osascript`** needs Automation consent and hangs until granted; `ffplay -fs -autoexit <file>` plays a clip full-screen without it.
 
 ## Commits
