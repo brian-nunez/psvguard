@@ -103,7 +103,7 @@ PSV Guard runs on macOS 14 or later. Building needs Go 1.25 or later, the Xcode 
 
 ### Linux (Wayland)
 
-PSV Guard runs in Wayland sessions; X11 sessions are not supported. On Omarchy (Hyprland) and other compositors with `wlr-layer-shell` it covers flashing as on macOS. On GNOME, including Ubuntu's default desktop, apps cannot draw over other apps, so PSV Guard warns instead: its status turns to a warning and a notification asks you to look away.
+PSV Guard runs in Wayland sessions; X11 sessions are not supported. On Omarchy (Hyprland) and other compositors with `wlr-layer-shell` it covers flashing as on macOS. On GNOME, including Ubuntu's default desktop, apps cannot draw over other apps, so PSV Guard warns instead: its status turns to a warning and a notification asks you to look away. The notification is sent as critical, which GNOME shows even over full-screen video, and each new warning replaces the last one.
 
 Build it from source. On Omarchy or Arch:
 
@@ -189,9 +189,10 @@ make fmt-check                 # fail if formatting would change anything
 make run                       # build the app and run it with --verbose in the terminal
 make release                   # build the universal app, zip it and write SHA256SUMS into dist/
 make dev-up DESKTOP=omarchy    # Linux: a Hyprland desktop in Docker, at http://localhost:6081/ through noVNC
+make dev-up DESKTOP=ubuntu     # Linux: Ubuntu 26.04's GNOME desktop, at http://localhost:6082/ (VNC password psvguard)
 ```
 
-Linux work is built and checked inside the Docker desktops in [`dev/linux`](dev/linux), so nothing runs in your own session. `make dev-shell` opens a shell there; inside, `psvguard-session run <command>` runs a command in the desktop's Wayland session, for example `psvguard-session run ./build/psvguard --verbose` or `psvguard-session run make smoke`. Hyprland needs the host's GPU; on hosts with NVIDIA's proprietary driver the image installs the matching userspace driver.
+Linux work is built and checked inside the Docker desktops in [`dev/linux`](dev/linux), so nothing runs in your own session. `make dev-shell` opens a shell there (`DESKTOP=ubuntu` for the GNOME one, where every shell is already in the session); in the Hyprland desktop, `psvguard-session run <command>` runs a command in its Wayland session, for example `psvguard-session run ./build/psvguard --verbose` or `psvguard-session run make smoke`. Hyprland needs the host's GPU; on hosts with NVIDIA's proprietary driver the image installs the matching userspace driver.
 
 ### Releases
 

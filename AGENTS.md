@@ -97,6 +97,8 @@ Running `dist/PSV Guard.app/Contents/MacOS/psvguard` from a terminal uses the te
 - **Linux capture includes the covers** (`excludesOwnWindows: false`): covered content is not analysed, so a cover over content that keeps flashing lifts after the calm time and returns once the flashing is seen again.
 - **Portal restore tokens are single use.** A failed restore (a portal backend on the wrong Wayland display, say) consumes the token and the share dialog appears again. In `dev/linux`, start programs with `psvguard-session run`, which takes the session's environment from Waybar; Hyprland's own environment names labwc's display.
 - **`libpipewire-0.3.pc` adds `-fno-strict-overflow`**, which cgo refuses, so `native_linux.go` spells out PipeWire's include paths instead of using `#cgo pkg-config` for it.
+- **GNOME hides ordinary notifications over full-screen apps**, which is where flashing plays; the Linux bus sends critical ones, which stay until dismissed, so each replaces the last.
+- **The Ubuntu desktop in `dev/linux/ubuntu`** rebuilds gnome-remote-desktop with its VNC backend (Ubuntu ships it without) and patches headless VNC to mirror the session's monitor; the VNC password is `psvguard`. Its shells join the session directly.
 - **`pkill -f` in `docker exec bash -c`** matches its own shell's command line and kills it; anchor the pattern (`pkill -f '^name'`).
 - **Driving QuickTime with `osascript`** needs Automation consent and hangs until granted; `ffplay -fs -autoexit <file>` plays a clip full-screen without it.
 

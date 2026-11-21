@@ -272,7 +272,8 @@ Linux).
   event releases the handle.
 - **Events.** Hyprland's event socket gives workspace and full-screen changes as transitions;
   logind's `PrepareForSleep` gives sleep and wake; notifications go through
-  `org.freedesktop.Notifications`.
+  `org.freedesktop.Notifications` with critical urgency, since notification servers (GNOME's
+  among them) hide ordinary banners over full-screen apps, and each replaces the one before.
 - **Capabilities.** `excludesOwnWindows: false`, `canOverlay` when the compositor has layer-shell
   (not on GNOME), `perDisplayCapture: true`, `consentPerSession: true`, `BGRx` and `BGRA`.
 
@@ -332,8 +333,9 @@ hardware will differ:
   no misses.
 - `internal/bridge` on Linux tests `pg_norm_to_px`, the C side's JSON round trip (types and
   escapes intact, malformed input empty) and the Wayland check, plus a smoke test in a Wayland
-  session (`make smoke` there) that checks the startup events, shows and clears a cover and
-  answers a stop for an unknown stream.
+  session (`make smoke` there) that checks the startup events, shows and clears a cover (on
+  GNOME, answers the cover command with none shown) and answers a stop for an unknown stream. It
+  passes in both development desktops.
 - `internal/bridge` tests the payloads, the binary cover layout, the outbox and the event queue;
   on macOS also `pg_norm_to_points` at 1× and 2× and on a second display, and a smoke test
   (`make smoke`, needs Screen Recording permission) that captures the main display, shows a cover
